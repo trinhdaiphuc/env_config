@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 )
 
 const (
 	// DefaultTagName is the default tag name for struct fields which provides
 	// a more granular to tweak certain structs. Lookup the necessary functions
 	// for more info.
-	DefaultTagName = "env" // struct's field default tag name
+	DefaultTagName = "env" // struct field default tag name
 
 	Underscore = "_"
 )
@@ -172,33 +171,12 @@ func NewStruct(s interface{}, keyPrefix string) (StructItem, error) {
 			field.Set(reflect.New(field.Type().Elem()))
 		}
 
-		// Check for time.Time specifically
-		if field.Type() == reflect.TypeOf(time.Time{}) {
-			children = append(children, FieldItem{
-				raw:        field.Interface(),
-				key:        key,
-				value:      field,
-				fieldName:  structField.Name,
-				tagOptions: nestedTagOpts,
-			})
-		} else if field.Kind() == reflect.Struct || (field.Kind() == reflect.Ptr && field.Elem().Kind() == reflect.Struct) {
-			if field.Kind() == reflect.Ptr {
-				field = field.Elem()
-			}
-			childStruct, err := NewStruct(field.Addr().Interface(), key)
-			if err != nil {
-				return StructItem{}, err
-			}
-			children = append(children, childStruct)
-		} else {
-			children = append(children, FieldItem{
-				raw:        field.Interface(),
-				key:        key,
-				value:      field,
-				fieldName:  structField.Name,
-				tagOptions: nestedTagOpts,
-			})
+		fieldType := field.Type()
+		if field.Kind() == reflect.Ptr {
+			fieldType = field.Elem().Type()
 		}
+		handler := handlerFactory.GetHandler(fieldType)
+		children = append(children, handler.Handle(key, field, nestedTagOpts))
 	}
 
 	return StructItem{

@@ -4,6 +4,7 @@ import "strings"
 
 const (
 	DefaultTagKey = "default"
+	Delimiter     = "delimiter"
 )
 
 type TagOption struct {
