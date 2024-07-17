@@ -17,7 +17,7 @@ const (
 )
 
 var (
-	_ Item = ConfigItem{}
+	_ Item = FieldItem{}
 	_ Item = StructItem{}
 )
 
@@ -29,7 +29,7 @@ type Item interface {
 	print() string
 }
 
-type ConfigItem struct {
+type FieldItem struct {
 	raw        interface{}
 	value      reflect.Value
 	key        string
@@ -37,11 +37,11 @@ type ConfigItem struct {
 	tagOptions []TagOption
 }
 
-func (c ConfigItem) Key() string {
+func (c FieldItem) Key() string {
 	return c.key
 }
 
-func (c ConfigItem) print() string {
+func (c FieldItem) print() string {
 	str := "value:" + c.value.String() + ", key:" + c.key
 	if c.tagOptions == nil {
 		return str
@@ -54,15 +54,15 @@ func (c ConfigItem) print() string {
 	return str + "}"
 }
 
-func (c ConfigItem) TagOptions() []TagOption {
+func (c FieldItem) TagOptions() []TagOption {
 	return c.tagOptions
 }
 
-func (c ConfigItem) Value() reflect.Value {
+func (c FieldItem) Value() reflect.Value {
 	return c.value
 }
 
-func (c ConfigItem) Load() error {
+func (c FieldItem) Load() error {
 	var defaultValue string
 	for _, opt := range c.TagOptions() {
 		if opt.key == DefaultTagKey {
@@ -85,19 +85,15 @@ func (c ConfigItem) Load() error {
 		return fmt.Errorf("cannot set value for key %s", c.key)
 	}
 
-	strategy, exists := strategies[value.Kind()]
-	if exists {
-		return strategy.SetValue(value, envValue)
+	strategy, exists := complexTypeStrategies[value.Type()]
+	if !exists {
+		strategy, exists = buildInTypeStrategies[value.Kind()]
+		if !exists {
+			return nil
+		}
 	}
 
-	switch value.Type() {
-	case reflect.TypeOf(time.Duration(0)):
-		return DurationStrategy{}.SetValue(value, envValue)
-	case reflect.TypeOf(time.Time{}):
-		return TimeStrategy{}.SetValue(value, envValue)
-	}
-
-	return nil
+	return strategy.SetValue(value, envValue)
 }
 
 type StructItem struct {
@@ -150,8 +146,12 @@ func (s StructItem) Children() []Item {
 	return s.children
 }
 
-func NewStruct(s interface{}, keyPrefix string) StructItem {
-	val := pointerVal(s)
+func NewStruct(s interface{}, keyPrefix string) (StructItem, error) {
+	val, err := pointerVal(s)
+	if err != nil {
+		return StructItem{}, err
+	}
+
 	typ := val.Type()
 
 	var children []Item
@@ -160,6 +160,10 @@ func NewStruct(s interface{}, keyPrefix string) StructItem {
 		structField := typ.Field(i)
 
 		envTag := structField.Tag.Get(DefaultTagName)
+		if envTag == "" {
+			continue
+		}
+
 		envTag = strings.ReplaceAll(envTag, " ", "")
 		key, nestedTagOpts := parseTagAndKey(envTag)
 		key = combineKeyPrefix(keyPrefix, key)
@@ -168,14 +172,26 @@ func NewStruct(s interface{}, keyPrefix string) StructItem {
 			field.Set(reflect.New(field.Type().Elem()))
 		}
 
-		if field.Kind() == reflect.Struct || (field.Kind() == reflect.Ptr && field.Elem().Kind() == reflect.Struct) {
+		// Check for time.Time specifically
+		if field.Type() == reflect.TypeOf(time.Time{}) {
+			children = append(children, FieldItem{
+				raw:        field.Interface(),
+				key:        key,
+				value:      field,
+				fieldName:  structField.Name,
+				tagOptions: nestedTagOpts,
+			})
+		} else if field.Kind() == reflect.Struct || (field.Kind() == reflect.Ptr && field.Elem().Kind() == reflect.Struct) {
 			if field.Kind() == reflect.Ptr {
 				field = field.Elem()
 			}
-			childStruct := NewStruct(field.Addr().Interface(), key)
+			childStruct, err := NewStruct(field.Addr().Interface(), key)
+			if err != nil {
+				return StructItem{}, err
+			}
 			children = append(children, childStruct)
 		} else {
-			children = append(children, ConfigItem{
+			children = append(children, FieldItem{
 				raw:        field.Interface(),
 				key:        key,
 				value:      field,
@@ -190,23 +206,26 @@ func NewStruct(s interface{}, keyPrefix string) StructItem {
 		raw:      s,
 		value:    val,
 		children: children,
-	}
+	}, nil
 }
 
-func pointerVal(s interface{}) reflect.Value {
-	v := reflect.ValueOf(s)
+func pointerVal(s interface{}) (reflect.Value, error) {
+	val := reflect.ValueOf(s)
 
 	// if pointer get the underlying element≤
-	for v.Kind() == reflect.Ptr {
-		v = v.Elem()
+	for val.Kind() == reflect.Ptr {
+		val = val.Elem()
 	}
-
-	return v
+	if val.Kind() != reflect.Struct {
+		return val, fmt.Errorf("expected struct, got %v", val.Kind())
+	}
+	return val, nil
 }
 
 func parseTagAndKey(str string) (key string, tags []TagOption) {
 	tagStr := strings.Split(str, ",")
-	if len(tagStr) == 0 {
+	if len(tagStr) <= 1 {
+		key = str
 		return
 	}
 

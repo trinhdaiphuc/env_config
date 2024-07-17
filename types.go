@@ -21,10 +21,15 @@ func (s StringStrategy) SetValue(field reflect.Value, envValue string) error {
 type IntStrategy struct{}
 
 func (s IntStrategy) SetValue(field reflect.Value, envValue string) error {
+	if envValue == "" {
+		return nil
+	}
+
 	v, err := strconv.ParseInt(envValue, 10, 64)
 	if err != nil {
 		return err
 	}
+
 	field.SetInt(v)
 	return nil
 }
@@ -32,6 +37,10 @@ func (s IntStrategy) SetValue(field reflect.Value, envValue string) error {
 type UintStrategy struct{}
 
 func (s UintStrategy) SetValue(field reflect.Value, envValue string) error {
+	if envValue == "" {
+		return nil
+	}
+
 	v, err := strconv.ParseUint(envValue, 10, 64)
 	if err != nil {
 		return err
@@ -91,7 +100,7 @@ func (s TimeStrategy) SetValue(field reflect.Value, envValue string) error {
 	return nil
 }
 
-var strategies = map[reflect.Kind]TypeStrategy{
+var buildInTypeStrategies = map[reflect.Kind]TypeStrategy{
 	reflect.String:  StringStrategy{},
 	reflect.Int:     IntStrategy{},
 	reflect.Int8:    IntStrategy{},
@@ -107,4 +116,9 @@ var strategies = map[reflect.Kind]TypeStrategy{
 	reflect.Float64: FloatStrategy{},
 	reflect.Bool:    BoolStrategy{},
 	reflect.Slice:   ByteSliceStrategy{},
+}
+
+var complexTypeStrategies = map[reflect.Type]TypeStrategy{
+	reflect.TypeOf(time.Duration(0)): DurationStrategy{},
+	reflect.TypeOf(time.Time{}):      TimeStrategy{},
 }
