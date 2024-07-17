@@ -25,10 +25,6 @@ func NewTypeHandlerFactory() *TypeHandlerFactory {
 	}
 }
 
-func (f *TypeHandlerFactory) RegisterHandler(t reflect.Type, handler TypeHandler) {
-	f.handlers[t] = handler
-}
-
 func (f *TypeHandlerFactory) GetHandler(t reflect.Type) TypeHandler {
 	if handler, ok := f.handlers[t]; ok {
 		return handler

@@ -10,7 +10,9 @@ go get -u github.com/trinhdaiphuc/env_config
 
 ## Usage
 
-Define your config with struct tag `env:"{env_variable},default={default_value}"`. For example:
+To configure your application using environment variables, define your struct fields with the `env` tag. This tag allows you to specify the environment variable name, a default value if the environment variable is not set, and a delimiter for parsing slice types. The format for the tag is as follows:
+
+`env:"{env_variable};default={default_value};delimiter={delimiter_value}"`
 
 ```go
 type Config struct {

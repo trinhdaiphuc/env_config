@@ -14,13 +14,10 @@ func TestParseTagAndKey(t *testing.T) {
 		expectedTags TagOption
 	}{
 		{
-			name:        "Test ParseTagAndKey with single tag",
-			tag:         "CACHE_REDIS_HOST;key=value",
-			expectedKey: "CACHE_REDIS_HOST",
-			expectedTags: &DefaultOption{
-				BaseTagOption: BaseTagOption{},
-				DefaultValue:  "",
-			},
+			name:         "Test ParseTagAndKey with single tag",
+			tag:          "CACHE_REDIS_HOST;key=value",
+			expectedKey:  "CACHE_REDIS_HOST",
+			expectedTags: nil,
 		},
 		{
 			name:         "Test ParseTagAndKey with multiple tags",
@@ -49,13 +46,10 @@ func TestParseTagAndKey(t *testing.T) {
 			expectedTags: nil,
 		},
 		{
-			name:        "Test tag with spaces",
-			tag:         "CACHE_REDIS_HOST; key1=value1; key2=value2; delimiter= ;  key =3",
-			expectedKey: "CACHE_REDIS_HOST",
-			expectedTags: &DelimiterOption{
-				BaseTagOption: BaseTagOption{},
-				Delimiter:     " ",
-			},
+			name:         "Test tag with spaces",
+			tag:          "CACHE_REDIS_HOST; key1=value1; key2=value2; delimiter= ;  key =3",
+			expectedKey:  "CACHE_REDIS_HOST",
+			expectedTags: nil,
 		},
 	}
 	for _, tt := range tests {

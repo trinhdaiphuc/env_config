@@ -164,8 +164,6 @@ func parseTagAndKey(str string) (key string, tag TagOption) {
 	tagStr := strings.Split(str, Semicolon)
 	if len(tagStr) <= 1 {
 		key = str
-		builder := DefaultOptionBuilder{}
-		tag = builder.Build()
 		return
 	}
 

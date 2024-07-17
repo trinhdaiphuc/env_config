@@ -54,7 +54,7 @@ type DelimiterOptionBuilder struct{}
 func (d *DelimiterOptionBuilder) Build() TagOption {
 	return &DelimiterOption{
 		BaseTagOption: BaseTagOption{},
-		Delimiter:     "",
+		Delimiter:     ",",
 	}
 }
 
@@ -164,10 +164,10 @@ func parseTag(tag string) TagOption {
 		}
 	}
 
-	if head == nil {
-		builder := DefaultOptionBuilder{}
-		head = builder.Build()
-	}
-
 	return head
+}
+
+func defaultTagOption() TagOption {
+	delimiterBuilder := DelimiterOptionBuilder{}
+	return delimiterBuilder.Build()
 }
