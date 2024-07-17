@@ -6,42 +6,6 @@ import (
 	"testing"
 )
 
-type RedisConfig struct {
-	Host     string `env:"HOST"`
-	Port     int    `env:"PORT"`
-	Password string `env:"PASSWORD"`
-}
-
-type ServerConfig struct {
-	CacheConfig *RedisConfig `env:"REDIS"`
-}
-
-func TestNewStruct(t *testing.T) {
-	tests := []struct {
-		name      string
-		cfg       interface{}
-		keyPrefix string
-		wantKind  reflect.Kind
-		wantErr   bool
-	}{
-		{
-			name:      "Test NewStruct with ServerConfig",
-			cfg:       &ServerConfig{},
-			keyPrefix: "",
-			wantKind:  reflect.Struct,
-			wantErr:   false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			structItem := NewStruct(tt.cfg, tt.keyPrefix)
-			if structItem.Value().Kind() != tt.wantKind {
-				t.Errorf("Expected StructItem to hold a struct value, got %s", structItem.Value().Kind())
-			}
-		})
-	}
-}
-
 func TestParseTagAndKey(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -60,6 +24,12 @@ func TestParseTagAndKey(t *testing.T) {
 			tag:          "CACHE_REDIS_HOST,key1=value1,key2=value2",
 			expectedKey:  "CACHE_REDIS_HOST",
 			expectedTags: []TagOption{{key: "key1", value: "value1"}, {key: "key2", value: "value2"}},
+		},
+		{
+			name:         "Test empty tag",
+			tag:          "",
+			expectedKey:  "",
+			expectedTags: nil,
 		},
 	}
 	for _, tt := range tests {
@@ -92,10 +62,10 @@ func TestStructItem_Load(t *testing.T) {
 			name: "Test StructItem Load with ServerConfig",
 			args: args{
 				cfg:         &ServerConfig{},
-				envVarKey:   "CACHE_REDIS_HOST",
-				envVarValue: "cache_redis_host_value",
+				envVarKey:   "REDIS_HOST",
+				envVarValue: "localhost",
 			},
-			want:    "cache_redis_host_value",
+			want:    "localhost",
 			wantErr: false,
 		},
 	}
@@ -104,8 +74,12 @@ func TestStructItem_Load(t *testing.T) {
 			os.Setenv(tt.args.envVarKey, tt.args.envVarValue)
 			defer os.Unsetenv(tt.args.envVarKey)
 
-			structItem := NewStruct(tt.args.cfg, "")
-			err := structItem.Load()
+			structItem, err := NewStruct(tt.args.cfg, "")
+			if (err != nil) != tt.wantErr {
+				t.Errorf("StructItem.Load() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			err = structItem.Load()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("StructItem.Load() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -168,7 +142,7 @@ func TestConfigItem_Load(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Test ConfigItem Load with RedisConfig",
+			name: "Test FieldItem Load with RedisConfig",
 			args: args{
 				cfg:         &RedisConfig{},
 				envVarKey:   "REDIS_HOST",
@@ -184,12 +158,16 @@ func TestConfigItem_Load(t *testing.T) {
 			os.Setenv(tt.args.envVarKey, tt.args.envVarValue)
 			defer os.Unsetenv(tt.args.envVarKey)
 
-			structItem := NewStruct(tt.args.cfg, "")
+			structItem, err := NewStruct(tt.args.cfg, "")
+			if (err != nil) != tt.wantErr {
+				t.Errorf("StructItem.Load() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
 			for _, child := range structItem.Children() {
-				if configItem, ok := child.(ConfigItem); ok && configItem.Key() == tt.args.configKey {
+				if configItem, ok := child.(FieldItem); ok && configItem.Key() == tt.args.configKey {
 					err := configItem.Load()
 					if (err != nil) != tt.wantErr {
-						t.Errorf("ConfigItem.Load() error = %v, wantErr %v", err, tt.wantErr)
+						t.Errorf("FieldItem.Load() error = %v, wantErr %v", err, tt.wantErr)
 					}
 
 					if configItem.Value().String() != tt.want {
@@ -199,4 +177,211 @@ func TestConfigItem_Load(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewStruct(t *testing.T) {
+	type args struct {
+		s         interface{}
+		keyPrefix string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    StructItem
+		wantErr bool
+	}{
+		{
+			name: "Valid ServerConfig without prefix",
+			args: args{
+				s:         &ServerConfig{},
+				keyPrefix: "",
+			},
+			want: StructItem{
+				prefix: "",
+				children: []Item{
+					StructItem{
+						prefix:     "REDIS",
+						raw:        &RedisConfig{},
+						value:      reflect.ValueOf(&RedisConfig{}),
+						tagOptions: nil,
+						children: []Item{
+							FieldItem{
+								key:        "REDIS_HOST",
+								tagOptions: nil,
+							},
+							FieldItem{
+								key:        "REDIS_PORT",
+								tagOptions: nil,
+							},
+							FieldItem{
+								key:        "REDIS_PASSWORD",
+								tagOptions: nil,
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Valid NestedConfig with prefix",
+			args: args{
+				s:         &NestedConfig{},
+				keyPrefix: "APP_",
+			},
+			want: StructItem{
+				prefix: "APP_",
+				value:  reflect.ValueOf(&NestedConfig{}),
+				children: []Item{
+					StructItem{
+						prefix: "APP_DB",
+						value:  reflect.ValueOf(&DatabaseConfig{}),
+						children: []Item{
+							FieldItem{
+								raw:        "",
+								key:        "APP_DB_HOST",
+								value:      reflect.ValueOf(""),
+								fieldName:  "Host",
+								tagOptions: nil,
+							},
+							FieldItem{
+								raw:        0,
+								key:        "APP_DB_PORT",
+								value:      reflect.ValueOf(0),
+								fieldName:  "Port",
+								tagOptions: nil,
+							},
+							FieldItem{
+								raw:        "",
+								key:        "APP_DB_USER",
+								value:      reflect.ValueOf(""),
+								fieldName:  "Username",
+								tagOptions: nil,
+							},
+							FieldItem{
+								raw:        "",
+								key:        "APP_DB_PASS",
+								value:      reflect.ValueOf(""),
+								fieldName:  "Password",
+								tagOptions: nil,
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "UninitializedPointerConfig without prefix",
+			args: args{
+				s:         &UninitializedPointerConfig{},
+				keyPrefix: "",
+			},
+			want: StructItem{
+				prefix: "",
+				children: []Item{
+					FieldItem{
+						key:        "LOG_LEVEL",
+						tagOptions: nil,
+					},
+					FieldItem{
+						key:        "TIMEOUT",
+						tagOptions: nil,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "EnvVarTaggedConfig with prefix",
+			args: args{
+				s:         &EnvVarTaggedConfig{},
+				keyPrefix: "APP_",
+			},
+			want: StructItem{
+				prefix: "APP_",
+				children: []Item{
+					FieldItem{
+						key:        "APP_APP_NAME",
+						tagOptions: nil,
+					},
+					FieldItem{
+						key:        "APP_DEBUG",
+						tagOptions: nil,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Non-struct input",
+			args: args{
+				s:         123,
+				keyPrefix: "",
+			},
+			want:    StructItem{},
+			wantErr: true,
+		},
+		{
+			name: "EnvVarTaggedConfig with prefix",
+			args: args{
+				s:         EnvVarTaggedConfig{},
+				keyPrefix: "APP_",
+			},
+			want: StructItem{
+				prefix: "APP_",
+				children: []Item{
+					FieldItem{
+						key:        "APP_APP_NAME",
+						tagOptions: nil,
+					},
+					FieldItem{
+						key:        "APP_DEBUG",
+						tagOptions: nil,
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NewStruct(tt.args.s, tt.args.keyPrefix)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewStruct() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !compareStructItems(got, tt.want) {
+				t.Errorf("NewStruct() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func compareStructItems(a, b StructItem) bool {
+	if a.prefix != b.prefix || !reflect.DeepEqual(a.tagOptions, b.tagOptions) || len(a.children) != len(b.children) {
+		return false
+	}
+	for i, childA := range a.children {
+		childB := b.children[i]
+		structChildA, ok := childA.(StructItem)
+		if !ok {
+			if !compareItems(childA, childB) {
+				return false
+			}
+		} else {
+			structChildB := childB.(StructItem)
+			if !compareStructItems(structChildA, structChildB) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func compareItems(a, b Item) bool {
+	if a.Key() != b.Key() || !reflect.DeepEqual(a.TagOptions(), b.TagOptions()) {
+		return false
+	}
+	return true
 }

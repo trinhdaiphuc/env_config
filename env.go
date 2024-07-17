@@ -5,7 +5,10 @@ import (
 )
 
 func LoadConfig(cfg interface{}) error {
-	root := NewStruct(cfg, "")
+	root, err := NewStruct(cfg, "")
+	if err != nil {
+		return err
+	}
 	return root.Load()
 }
 
