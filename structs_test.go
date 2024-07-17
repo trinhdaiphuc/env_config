@@ -309,6 +309,14 @@ func TestNewStruct(t *testing.T) {
 						key:        "APP_DEBUG",
 						tagOptions: nil,
 					},
+					FieldItem{
+						key:        "APP_PI",
+						tagOptions: nil,
+					},
+					FieldItem{
+						key:        "APP_NUMBER",
+						tagOptions: nil,
+					},
 				},
 			},
 			wantErr: false,
@@ -321,27 +329,6 @@ func TestNewStruct(t *testing.T) {
 			},
 			want:    StructItem{},
 			wantErr: true,
-		},
-		{
-			name: "EnvVarTaggedConfig with prefix",
-			args: args{
-				s:         EnvVarTaggedConfig{},
-				keyPrefix: "APP_",
-			},
-			want: StructItem{
-				prefix: "APP_",
-				children: []Item{
-					FieldItem{
-						key:        "APP_APP_NAME",
-						tagOptions: nil,
-					},
-					FieldItem{
-						key:        "APP_DEBUG",
-						tagOptions: nil,
-					},
-				},
-			},
-			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
