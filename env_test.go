@@ -1,70 +1,280 @@
 package env_config
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
-	"strconv"
+	"reflect"
 	"testing"
 	"time"
 )
 
 type Config struct {
-	Host    string        `env:"HOST,localhost"`
-	Port    int           `env:"PORT,8080"`
-	Timeout time.Duration `env:"TIMEOUT"`
+	BuildInConfig              *BuildInConfig              `env:"BUILD_IN"`
+	ComplexConfig              *ComplexConfig              `env:"COMPLEX"`
+	Scheduler                  *Scheduler                  `env:"SCHEDULER"`
+	ServerConfig               *ServerConfig               `env:"SERVER"`
+	NestedConfig               *NestedConfig               `env:"APP"`
+	UninitializedPointerConfig *UninitializedPointerConfig `env:"UN_INIT"`
+	EnvVarTaggedConfig         *EnvVarTaggedConfig         `env:"TAG"`
+	Logger                     *Logger                     `env:"LOGGER"`
+	NotSet                     *NotSetConfig               `env:"NOT_SET"`
+	UnFieldConfig              string
 }
 
-func TestHello(t *testing.T) {
-	os.Setenv("HELLO", "")
-	if hello := Env("HELLO", "world"); hello != "world" {
-		t.Errorf("Output expect HELLO variable value world instead of %v", hello)
-	}
-
-	os.Setenv("HI", "hello")
-
-	if hi := Env("HELLO", "world"); hi != "world" {
-		t.Errorf("Output expect HI variable value world instead of %v", hi)
-	}
+type BuildInConfig struct {
+	BoolValue    bool    `env:"BOOL_VALUE"`
+	Float32Value float32 `env:"FLOAT32_VALUE"`
+	Float64Value float64 `env:"FLOAT64_VALUE"`
+	IntValue     int     `env:"INT_VALUE"`
+	StringValue  string  `env:"STRING_VALUE"`
 }
 
-func TestEnvStruct(t *testing.T) {
+type ComplexConfig struct {
+	BoolArray    []bool        `env:"BOOL_ARRAY,delimiter=;"`
+	Float32Array []float32     `env:"FLOAT32_ARRAY,delimiter=;"`
+	Float64Array []float64     `env:"FLOAT64_ARRAY,delimiter=;"`
+	IntArray     []int         `env:"INT_ARRAY,delimiter=;"`
+	StringArray  []string      `env:"STRING_ARRAY,delimiter=;"`
+	Duration     time.Duration `env:"DURATION"`
+	Time         time.Time     `env:"TIME"`
+}
+
+type EmptyConfig struct {
+}
+
+type ServerConfig struct {
+	CacheConfig *RedisConfig `env:"REDIS"`
+}
+
+type NestedConfig struct {
+	Database *DatabaseConfig `env:"DB"`
+}
+
+type UninitializedPointerConfig struct {
+	LogLevel *string `env:"LOG_LEVEL"`
+	Timeout  *int    `env:"TIMEOUT"`
+}
+
+type EnvVarTaggedConfig struct {
+	AppName string  `env:"APP_NAME"`
+	Debug   bool    `env:"DEBUG"`
+	Pi      float64 `env:"PI"`
+	Number  uint    `env:"NUMBER"`
+}
+
+type Logger struct {
+	Level   string `env:"LEVEL"`
+	Encoder string `env:"ENCODER"`
+}
+
+type NotSetConfig struct {
+	Name          string  `env:"NAME"`
+	Float32       float32 `env:"FLOAT32"`
+	Float64       float64 `env:"FLOAT64"`
+	Bool          bool    `env:"BOOL"`
+	Int           int     `env:"INT"`
+	Uint          uint    `env:"UINT"`
+	String        string  `env:"STRING"`
+	DefaultInt    int     `env:"DEFAULT_INT,default=10"`
+	DefaultString string  `env:"DEFAULT_STRING,default=hello"`
+	DefaulUint    uint    `env:"DEFAULT_UINT,default=10"`
+	DefaultBool   bool    `env:"DEFAULT_BOOL,default=true"`
+	DefaultFloat  float64 `env:"DEFAULT_FLOAT,default=3.14"`
+}
+
+type Scheduler struct {
+	TimeInterval time.Duration `env:"INTERVAL"`
+	StartAt      time.Time     `env:"START_AT"`
+}
+
+type RedisConfig struct {
+	Host     string `env:"HOST"`
+	Port     int    `env:"PORT"`
+	Password string `env:"PASSWORD"`
+}
+
+type DatabaseConfig struct {
+	Host     string `env:"HOST"`
+	Port     int    `env:"PORT"`
+	Username string `env:"USER"`
+	Password string `env:"PASS"`
+}
+
+func TestLoadConfig(t *testing.T) {
+	type args struct {
+		cfg interface{}
+	}
+
 	var (
-		host         = "127.0.0.1"
-		port         = "8081"
-		timeout      = "1h30m"
-		portInt, _   = strconv.ParseInt(port, 10, 64)
-		timeParse, _ = time.ParseDuration(timeout)
+		timeNow = time.Now()
 	)
-	os.Setenv("HOST", host)
-	os.Setenv("PORT", port)
-	os.Setenv("TIMEOUT", timeout)
-	cfg := &Config{}
-	err := EnvStruct(cfg)
-	if err != nil {
-		t.Error(err)
+	clean := setEnv(timeNow)
+	defer clean()
+
+	tests := []struct {
+		name    string
+		args    args
+		wantCfg interface{}
+		wantErr bool
+	}{
+		{
+			name: "Test LoadConfig",
+			args: args{
+				cfg: &Config{},
+			},
+			wantCfg: &Config{
+				BuildInConfig: &BuildInConfig{
+					BoolValue:    true,
+					Float32Value: 3.14,
+					Float64Value: 3.14,
+					IntValue:     10,
+					StringValue:  "hello",
+				},
+				ComplexConfig: &ComplexConfig{
+					BoolArray:    []bool{true, false},
+					Float32Array: []float32{3.14, 6.28},
+					Float64Array: []float64{3.14, 6.28},
+					IntArray:     []int{1, 2},
+					StringArray:  []string{"a", "b", "c"},
+					Duration:     5 * time.Minute,
+					Time:         timeNow.Truncate(time.Second),
+				},
+				Scheduler: &Scheduler{
+					TimeInterval: 5 * time.Minute,
+					StartAt:      timeNow.Truncate(time.Second),
+				},
+				ServerConfig: &ServerConfig{
+					CacheConfig: &RedisConfig{
+						Host:     "127.0.0.1",
+						Port:     6379,
+						Password: "secret",
+					},
+				},
+				NestedConfig: &NestedConfig{
+					Database: &DatabaseConfig{
+						Host:     "localhost",
+						Port:     3306,
+						Username: "root",
+						Password: "password",
+					},
+				},
+				UninitializedPointerConfig: &UninitializedPointerConfig{
+					LogLevel: stringPointer("info"),
+					Timeout:  intPointer(10),
+				},
+				EnvVarTaggedConfig: &EnvVarTaggedConfig{
+					AppName: "env_config",
+					Debug:   true,
+					Pi:      3.14,
+					Number:  0,
+				},
+				Logger: &Logger{
+					Level:   "debug",
+					Encoder: "json",
+				},
+				UnFieldConfig: "",
+				NotSet: &NotSetConfig{
+					Name:          "",
+					Float32:       0,
+					Float64:       0,
+					Bool:          false,
+					Int:           0,
+					Uint:          0,
+					String:        "",
+					DefaultInt:    10,
+					DefaultString: "hello",
+					DefaulUint:    10,
+					DefaultBool:   true,
+					DefaultFloat:  3.14,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Test LoadConfig with empty config",
+			args: args{
+				cfg: &EmptyConfig{},
+			},
+			wantCfg: &EmptyConfig{
+
+			},
+			wantErr: false,
+		},
+		{
+			name: "Test LoadConfig error",
+			args: args{
+				cfg: nil,
+			},
+			wantCfg: nil,
+			wantErr: true,
+		},
 	}
-	t.Logf("Config %+v", cfg)
-	if cfg.Host != host {
-		t.Errorf("Output expect %v variable value world instead of %v", host, cfg.Host)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := LoadConfig(tt.args.cfg); (err != nil) != tt.wantErr {
+				t.Errorf("LoadConfig() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if !reflect.DeepEqual(tt.args.cfg, tt.wantCfg) {
+				t.Errorf("LoadConfig() \ngot  = %v \nwant = %v", toJSONStr(tt.args.cfg), toJSONStr(tt.wantCfg))
+			}
+		})
 	}
-	if cfg.Port != int(portInt) {
-		t.Errorf("Output expect %v variable value world instead of %d", port, cfg.Port)
-	}
-	if cfg.Timeout != timeParse {
-		t.Errorf("Output expect %v variable value world instead of %d", timeout, cfg.Timeout)
+}
+
+func setEnv(timeNow time.Time) func() {
+	envMap := map[string]interface{}{
+		"BUILD_IN_BOOL_VALUE":    true,
+		"BUILD_IN_FLOAT32_VALUE": 3.14,
+		"BUILD_IN_FLOAT64_VALUE": 3.14,
+		"BUILD_IN_INT_VALUE":     10,
+		"BUILD_IN_STRING_VALUE":  "hello",
+		"COMPLEX_BOOL_ARRAY":     "true,false",
+		"COMPLEX_FLOAT32_ARRAY":  "3.14,6.28",
+		"COMPLEX_FLOAT64_ARRAY":  "3.14,6.28",
+		"COMPLEX_INT_ARRAY":      "1,2",
+		"COMPLEX_STRING_ARRAY":   "a,b,c",
+		"COMPLEX_DURATION":       "5m",
+		"COMPLEX_TIME":           timeNow.Format(time.RFC3339),
+		"SCHEDULER_INTERVAL":     "5m",
+		"SCHEDULER_START_AT":     timeNow.Format(time.RFC3339),
+		"SERVER_REDIS_HOST":      "127.0.0.1",
+		"SERVER_REDIS_PORT":      6379,
+		"SERVER_REDIS_PASSWORD":  "secret",
+		"APP_DB_HOST":            "localhost",
+		"APP_DB_PORT":            3306,
+		"APP_DB_USER":            "root",
+		"APP_DB_PASS":            "password",
+		"UN_INIT_LOG_LEVEL":      "info",
+		"UN_INIT_TIMEOUT":        10,
+		"TAG_APP_NAME":           "env_config",
+		"TAG_DEBUG":              true,
+		"TAG_PI":                 3.14,
+		"LOGGER_LEVEL":           "debug",
+		"LOGGER_ENCODER":         "json",
 	}
 
-	os.Clearenv()
+	for env, val := range envMap {
+		os.Setenv(env, fmt.Sprintf("%v", val))
+	}
 
-	err = EnvStruct(cfg)
-	if err != nil {
-		t.Error(err)
+	return func() {
+		for env, _ := range envMap {
+			os.Unsetenv(env)
+		}
 	}
-	t.Logf("Config %+v", cfg)
+}
 
-	if cfg.Host != "localhost" {
-		t.Errorf("Output expect localhost variable value world instead of %v", cfg.Host)
-	}
-	if cfg.Port != 8080 {
-		t.Errorf("Output expect 8080 variable value world instead of %d", cfg.Port)
-	}
+func stringPointer(s string) *string {
+	return &s
+}
+
+func intPointer(i int) *int {
+	return &i
+}
+
+func toJSONStr(object interface{}) string {
+	data, _ := json.Marshal(object)
+	return string(data)
 }
