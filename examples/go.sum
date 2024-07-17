@@ -3,3 +3,5 @@ github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=
 github.com/joho/godotenv v1.5.1/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=
 github.com/trinhdaiphuc/env_config v0.1.0 h1:mxulvGQXlaHAuJpwzUf9IbquiVDRWeE0/2SLNxNJOgM=
 github.com/trinhdaiphuc/env_config v0.1.0/go.mod h1:c+kJmlWE2Fi1O9o1IRotd9TlhT/Tz/FfEtVOdZlfwfM=
+github.com/trinhdaiphuc/env_config v0.1.1-0.20240717030637-ae332c55e8fc h1:7hS9uqNV8E9ZR/Wby0R2xgQ/XoYUaKKdfZWMVlVCYJ4=
+github.com/trinhdaiphuc/env_config v0.1.1-0.20240717030637-ae332c55e8fc/go.mod h1:wdVzv/23I2XrfWnaMPY+7FyVnbO9pfN4jowYcC/P6iY=
