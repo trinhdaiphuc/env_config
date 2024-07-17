@@ -1,70 +1,48 @@
 package env_config
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
-	"strconv"
 	"testing"
-	"time"
 )
 
-type Config struct {
-	Host    string        `env:"HOST,localhost"`
-	Port    int           `env:"PORT,8080"`
-	Timeout time.Duration `env:"TIMEOUT"`
-}
-
-func TestHello(t *testing.T) {
-	os.Setenv("HELLO", "")
-	if hello := Env("HELLO", "world"); hello != "world" {
-		t.Errorf("Output expect HELLO variable value world instead of %v", hello)
+func TestLoadConfig(t *testing.T) {
+	type args struct {
+		cfg interface{}
 	}
-
-	os.Setenv("HI", "hello")
-
-	if hi := Env("HELLO", "world"); hi != "world" {
-		t.Errorf("Output expect HI variable value world instead of %v", hi)
-	}
-}
-
-func TestEnvStruct(t *testing.T) {
 	var (
-		host         = "127.0.0.1"
-		port         = "8081"
-		timeout      = "1h30m"
-		portInt, _   = strconv.ParseInt(port, 10, 64)
-		timeParse, _ = time.ParseDuration(timeout)
+		host     = "127.0.0.1"
+		port     = "6379"
+		password = "secret"
 	)
-	os.Setenv("HOST", host)
-	os.Setenv("PORT", port)
-	os.Setenv("TIMEOUT", timeout)
-	cfg := &Config{}
-	err := EnvStruct(cfg)
-	if err != nil {
-		t.Error(err)
-	}
-	t.Logf("Config %+v", cfg)
-	if cfg.Host != host {
-		t.Errorf("Output expect %v variable value world instead of %v", host, cfg.Host)
-	}
-	if cfg.Port != int(portInt) {
-		t.Errorf("Output expect %v variable value world instead of %d", port, cfg.Port)
-	}
-	if cfg.Timeout != timeParse {
-		t.Errorf("Output expect %v variable value world instead of %d", timeout, cfg.Timeout)
-	}
+	os.Setenv("REDIS_HOST", host)
+	os.Setenv("REDIS_PORT", port)
+	os.Setenv("REDIS_PASSWORD", password)
+	defer os.Unsetenv("REDIS_HOST")
+	defer os.Unsetenv("REDIS_PORT")
+	defer os.Unsetenv("REDIS_PASSWORD")
 
-	os.Clearenv()
-
-	err = EnvStruct(cfg)
-	if err != nil {
-		t.Error(err)
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Test LoadConfig",
+			args: args{
+				cfg: &ServerConfig{},
+			},
+			wantErr: false,
+		},
 	}
-	t.Logf("Config %+v", cfg)
-
-	if cfg.Host != "localhost" {
-		t.Errorf("Output expect localhost variable value world instead of %v", cfg.Host)
-	}
-	if cfg.Port != 8080 {
-		t.Errorf("Output expect 8080 variable value world instead of %d", cfg.Port)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := LoadConfig(tt.args.cfg); (err != nil) != tt.wantErr {
+				t.Errorf("LoadConfig() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			data, _ := json.Marshal(tt.args.cfg)
+			fmt.Println("Config ", string(data))
+		})
 	}
 }

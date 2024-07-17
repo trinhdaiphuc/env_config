@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
-	_ "github.com/joho/godotenv/autoload"
-	"github.com/trinhdaiphuc/env_config"
 	"time"
+
+	_ "github.com/joho/godotenv/autoload"
+
+	"github.com/trinhdaiphuc/env_config"
 )
 
 type Config struct {
@@ -19,7 +21,7 @@ type Config struct {
 
 func main() {
 	cfg := &Config{}
-	if err := env_config.EnvStruct(cfg); err != nil {
+	if err := env_config.LoadConfig(cfg); err != nil {
 		panic(err)
 	}
 	fmt.Printf("Config %+v\n", cfg)
