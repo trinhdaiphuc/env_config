@@ -5,3 +5,5 @@ github.com/trinhdaiphuc/env_config v0.1.0 h1:mxulvGQXlaHAuJpwzUf9IbquiVDRWeE0/2S
 github.com/trinhdaiphuc/env_config v0.1.0/go.mod h1:c+kJmlWE2Fi1O9o1IRotd9TlhT/Tz/FfEtVOdZlfwfM=
 github.com/trinhdaiphuc/env_config v0.1.1-0.20240717030637-ae332c55e8fc h1:7hS9uqNV8E9ZR/Wby0R2xgQ/XoYUaKKdfZWMVlVCYJ4=
 github.com/trinhdaiphuc/env_config v0.1.1-0.20240717030637-ae332c55e8fc/go.mod h1:wdVzv/23I2XrfWnaMPY+7FyVnbO9pfN4jowYcC/P6iY=
+github.com/trinhdaiphuc/env_config v0.1.1-0.20240717082528-a2630e9dfcd3 h1:NaYyUWa9/4RBOermEzgIVHA2leNKDIGmuYXvCk7K2Ug=
+github.com/trinhdaiphuc/env_config v0.1.1-0.20240717082528-a2630e9dfcd3/go.mod h1:B1295hJQNhkLtLxAJOYK9l3g0EIW8T5p+1Nq1mr9qIA=
