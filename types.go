@@ -4,25 +4,36 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
-	"strings"
 	"time"
 )
 
 // TypeStrategy is an interface that defines a method to set a value to a field
 type TypeStrategy interface {
-	SetValue(field reflect.Value, envValue string) error
+	SetValue(field reflect.Value, envValue string, tagOption TagOption) error
 }
 
 type StringStrategy struct{}
 
-func (s StringStrategy) SetValue(field reflect.Value, envValue string) error {
+func (s StringStrategy) SetValue(field reflect.Value, envValue string, tagOption TagOption) error {
+	value, err := tagOption.Apply(envValue)
+	if err != nil {
+		return err
+	}
+
+	envValue, _ = value.(string)
 	field.SetString(envValue)
 	return nil
 }
 
 type IntStrategy struct{}
 
-func (s IntStrategy) SetValue(field reflect.Value, envValue string) error {
+func (s IntStrategy) SetValue(field reflect.Value, envValue string, tagOption TagOption) error {
+	value, err := tagOption.Apply(envValue)
+	if err != nil {
+		return err
+	}
+
+	envValue, _ = value.(string)
 	if envValue == "" {
 		return nil
 	}
@@ -38,7 +49,13 @@ func (s IntStrategy) SetValue(field reflect.Value, envValue string) error {
 
 type UintStrategy struct{}
 
-func (s UintStrategy) SetValue(field reflect.Value, envValue string) error {
+func (s UintStrategy) SetValue(field reflect.Value, envValue string, tagOption TagOption) error {
+	value, err := tagOption.Apply(envValue)
+	if err != nil {
+		return err
+	}
+
+	envValue, _ = value.(string)
 	if envValue == "" {
 		return nil
 	}
@@ -53,7 +70,13 @@ func (s UintStrategy) SetValue(field reflect.Value, envValue string) error {
 
 type FloatStrategy struct{}
 
-func (s FloatStrategy) SetValue(field reflect.Value, envValue string) error {
+func (s FloatStrategy) SetValue(field reflect.Value, envValue string, tagOption TagOption) error {
+	value, err := tagOption.Apply(envValue)
+	if err != nil {
+		return err
+	}
+
+	envValue, _ = value.(string)
 	if envValue == "" {
 		return nil
 	}
@@ -68,7 +91,13 @@ func (s FloatStrategy) SetValue(field reflect.Value, envValue string) error {
 
 type BoolStrategy struct{}
 
-func (s BoolStrategy) SetValue(field reflect.Value, envValue string) error {
+func (s BoolStrategy) SetValue(field reflect.Value, envValue string, tagOption TagOption) error {
+	value, err := tagOption.Apply(envValue)
+	if err != nil {
+		return err
+	}
+
+	envValue, _ = value.(string)
 	if envValue == "" {
 		return nil
 	}
@@ -82,14 +111,26 @@ func (s BoolStrategy) SetValue(field reflect.Value, envValue string) error {
 
 type ByteSliceStrategy struct{}
 
-func (s ByteSliceStrategy) SetValue(field reflect.Value, envValue string) error {
+func (s ByteSliceStrategy) SetValue(field reflect.Value, envValue string, tagOption TagOption) error {
+	value, err := tagOption.Apply(envValue)
+	if err != nil {
+		return err
+	}
+
+	envValue, _ = value.(string)
 	field.SetBytes([]byte(envValue))
 	return nil
 }
 
 type DurationStrategy struct{}
 
-func (s DurationStrategy) SetValue(field reflect.Value, envValue string) error {
+func (s DurationStrategy) SetValue(field reflect.Value, envValue string, tagOption TagOption) error {
+	value, err := tagOption.Apply(envValue)
+	if err != nil {
+		return err
+	}
+
+	envValue, _ = value.(string)
 	if envValue == "" {
 		return nil
 	}
@@ -103,7 +144,13 @@ func (s DurationStrategy) SetValue(field reflect.Value, envValue string) error {
 
 type TimeStrategy struct{}
 
-func (s TimeStrategy) SetValue(field reflect.Value, envValue string) error {
+func (s TimeStrategy) SetValue(field reflect.Value, envValue string, tagOption TagOption) error {
+	value, err := tagOption.Apply(envValue)
+	if err != nil {
+		return err
+	}
+
+	envValue, _ = value.(string)
 	if envValue == "" {
 		return nil
 	}
@@ -117,24 +164,34 @@ func (s TimeStrategy) SetValue(field reflect.Value, envValue string) error {
 
 type StringSliceStrategy struct{}
 
-func (s StringSliceStrategy) SetValue(v reflect.Value, value string) error {
+func (s StringSliceStrategy) SetValue(v reflect.Value, value string, tagOption TagOption) error {
 	if v.Kind() != reflect.Slice || v.Type().Elem().Kind() != reflect.String {
 		return fmt.Errorf("invalid type, expected []string but got %s", v.Kind())
 	}
 
-	values := strings.Split(value, ",")
+	valueInterface, err := tagOption.Apply(value)
+	if err != nil {
+		return err
+	}
+
+	values, _ := valueInterface.([]string)
 	v.Set(reflect.ValueOf(values))
 	return nil
 }
 
 type BoolSliceStrategy struct{}
 
-func (s BoolSliceStrategy) SetValue(v reflect.Value, value string) error {
+func (s BoolSliceStrategy) SetValue(v reflect.Value, value string, tagOption TagOption) error {
 	if v.Kind() != reflect.Slice || v.Type().Elem().Kind() != reflect.Bool {
 		return fmt.Errorf("invalid type, expected []bool but got %s", v.Kind())
 	}
 
-	values := strings.Split(value, ",")
+	valueInterface, err := tagOption.Apply(value)
+	if err != nil {
+		return err
+	}
+
+	values, _ := valueInterface.([]string)
 	boolValues := make([]bool, len(values))
 	for i, val := range values {
 		var b bool
@@ -149,12 +206,17 @@ func (s BoolSliceStrategy) SetValue(v reflect.Value, value string) error {
 
 type IntSliceStrategy struct{}
 
-func (s IntSliceStrategy) SetValue(v reflect.Value, value string) error {
+func (s IntSliceStrategy) SetValue(v reflect.Value, value string, tagOption TagOption) error {
 	if v.Kind() != reflect.Slice || v.Type().Elem().Kind() != reflect.Int {
 		return fmt.Errorf("invalid type, expected []int but got %s", v.Kind())
 	}
 
-	values := strings.Split(value, ",")
+	valueInterface, err := tagOption.Apply(value)
+	if err != nil {
+		return err
+	}
+
+	values, _ := valueInterface.([]string)
 	intValues := make([]int, len(values))
 	for i, val := range values {
 		var b int
@@ -169,12 +231,17 @@ func (s IntSliceStrategy) SetValue(v reflect.Value, value string) error {
 
 type UintSliceStrategy struct{}
 
-func (s UintSliceStrategy) SetValue(v reflect.Value, value string) error {
+func (s UintSliceStrategy) SetValue(v reflect.Value, value string, tagOption TagOption) error {
 	if v.Kind() != reflect.Slice || v.Type().Elem().Kind() != reflect.Uint {
 		return fmt.Errorf("invalid type, expected []uint but got %s", v.Kind())
 	}
 
-	values := strings.Split(value, ",")
+	valueInterface, err := tagOption.Apply(value)
+	if err != nil {
+		return err
+	}
+
+	values, _ := valueInterface.([]string)
 	uintValues := make([]uint, len(values))
 	for i, val := range values {
 		var b uint64
@@ -189,12 +256,17 @@ func (s UintSliceStrategy) SetValue(v reflect.Value, value string) error {
 
 type Float64SliceStrategy struct{}
 
-func (s Float64SliceStrategy) SetValue(v reflect.Value, value string) error {
+func (s Float64SliceStrategy) SetValue(v reflect.Value, value string, tagOption TagOption) error {
 	if v.Kind() != reflect.Slice || v.Type().Elem().Kind() != reflect.Float64 {
 		return fmt.Errorf("invalid type, expected []float64 but got %s", v.Kind())
 	}
 
-	values := strings.Split(value, ",")
+	valueInterface, err := tagOption.Apply(value)
+	if err != nil {
+		return err
+	}
+
+	values, _ := valueInterface.([]string)
 	floatValues := make([]float64, len(values))
 	for i, val := range values {
 		var b float64
@@ -209,12 +281,17 @@ func (s Float64SliceStrategy) SetValue(v reflect.Value, value string) error {
 
 type Float32SliceStrategy struct{}
 
-func (s Float32SliceStrategy) SetValue(v reflect.Value, value string) error {
+func (s Float32SliceStrategy) SetValue(v reflect.Value, value string, tagOption TagOption) error {
 	if v.Kind() != reflect.Slice || v.Type().Elem().Kind() != reflect.Float32 {
 		return fmt.Errorf("invalid type, expected []float32 but got %s", v.Kind())
 	}
 
-	values := strings.Split(value, ",")
+	valueInterface, err := tagOption.Apply(value)
+	if err != nil {
+		return err
+	}
+
+	values, _ := valueInterface.([]string)
 	floatValues := make([]float32, len(values))
 	for i, val := range values {
 		floatValue, err := strconv.ParseFloat(val, 64)

@@ -11,19 +11,36 @@ func TestParseTagAndKey(t *testing.T) {
 		name         string
 		tag          string
 		expectedKey  string
-		expectedTags []TagOption
+		expectedTags TagOption
 	}{
 		{
-			name:         "Test ParseTagAndKey with single tag",
-			tag:          "CACHE_REDIS_HOST,key=value",
-			expectedKey:  "CACHE_REDIS_HOST",
-			expectedTags: []TagOption{{key: "key", value: "value"}},
+			name:        "Test ParseTagAndKey with single tag",
+			tag:         "CACHE_REDIS_HOST;key=value",
+			expectedKey: "CACHE_REDIS_HOST",
+			expectedTags: &DefaultOption{
+				BaseTagOption: BaseTagOption{},
+				DefaultValue:  "",
+			},
 		},
 		{
 			name:         "Test ParseTagAndKey with multiple tags",
-			tag:          "CACHE_REDIS_HOST,key1=value1,key2=value2",
+			tag:          "CACHE_REDIS_HOST;key1=value1;key2=value2",
 			expectedKey:  "CACHE_REDIS_HOST",
-			expectedTags: []TagOption{{key: "key1", value: "value1"}, {key: "key2", value: "value2"}},
+			expectedTags: nil,
+		},
+		{
+			name:        "Test ParseTagAndKey with multiple tags",
+			tag:         "CACHE_REDIS_HOST;default=value1;delimiter=value2",
+			expectedKey: "CACHE_REDIS_HOST",
+			expectedTags: &DefaultOption{
+				BaseTagOption: BaseTagOption{
+					next: &DelimiterOption{
+						BaseTagOption: BaseTagOption{},
+						Delimiter:     "value2",
+					},
+				},
+				DefaultValue: "value1",
+			},
 		},
 		{
 			name:         "Test empty tag",
@@ -31,16 +48,25 @@ func TestParseTagAndKey(t *testing.T) {
 			expectedKey:  "",
 			expectedTags: nil,
 		},
+		{
+			name:        "Test tag with spaces",
+			tag:         "CACHE_REDIS_HOST; key1=value1; key2=value2; delimiter= ;  key =3",
+			expectedKey: "CACHE_REDIS_HOST",
+			expectedTags: &DelimiterOption{
+				BaseTagOption: BaseTagOption{},
+				Delimiter:     " ",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			key, tagOptions := parseTagAndKey(tt.tag)
+			key, tagOption := parseTagAndKey(tt.tag)
 			if key != tt.expectedKey {
 				t.Errorf("Expected key %s, got %s", tt.expectedKey, key)
 			}
 
-			if !reflect.DeepEqual(tagOptions, tt.expectedTags) {
-				t.Errorf("Expected tag options %v, got %v", tt.expectedTags, tagOptions)
+			if !reflect.DeepEqual(tagOption, tt.expectedTags) {
+				t.Errorf("Expected tag options %v, got %v", tt.expectedTags, tagOption)
 			}
 		})
 	}
@@ -200,22 +226,22 @@ func TestNewStruct(t *testing.T) {
 				prefix: "",
 				children: []Item{
 					StructItem{
-						prefix:     "REDIS",
-						raw:        &RedisConfig{},
-						value:      reflect.ValueOf(&RedisConfig{}),
-						tagOptions: nil,
+						prefix:    "REDIS",
+						raw:       &RedisConfig{},
+						value:     reflect.ValueOf(&RedisConfig{}),
+						tagOption: nil,
 						children: []Item{
 							FieldItem{
-								key:        "REDIS_HOST",
-								tagOptions: nil,
+								key:       "REDIS_HOST",
+								tagOption: nil,
 							},
 							FieldItem{
-								key:        "REDIS_PORT",
-								tagOptions: nil,
+								key:       "REDIS_PORT",
+								tagOption: nil,
 							},
 							FieldItem{
-								key:        "REDIS_PASSWORD",
-								tagOptions: nil,
+								key:       "REDIS_PASSWORD",
+								tagOption: nil,
 							},
 						},
 					},
@@ -238,32 +264,28 @@ func TestNewStruct(t *testing.T) {
 						value:  reflect.ValueOf(&DatabaseConfig{}),
 						children: []Item{
 							FieldItem{
-								raw:        "",
-								key:        "APP_DB_HOST",
-								value:      reflect.ValueOf(""),
-								fieldName:  "Host",
-								tagOptions: nil,
+								raw:       "",
+								key:       "APP_DB_HOST",
+								value:     reflect.ValueOf(""),
+								tagOption: nil,
 							},
 							FieldItem{
-								raw:        0,
-								key:        "APP_DB_PORT",
-								value:      reflect.ValueOf(0),
-								fieldName:  "Port",
-								tagOptions: nil,
+								raw:       0,
+								key:       "APP_DB_PORT",
+								value:     reflect.ValueOf(0),
+								tagOption: nil,
 							},
 							FieldItem{
-								raw:        "",
-								key:        "APP_DB_USER",
-								value:      reflect.ValueOf(""),
-								fieldName:  "Username",
-								tagOptions: nil,
+								raw:       "",
+								key:       "APP_DB_USER",
+								value:     reflect.ValueOf(""),
+								tagOption: nil,
 							},
 							FieldItem{
-								raw:        "",
-								key:        "APP_DB_PASS",
-								value:      reflect.ValueOf(""),
-								fieldName:  "Password",
-								tagOptions: nil,
+								raw:       "",
+								key:       "APP_DB_PASS",
+								value:     reflect.ValueOf(""),
+								tagOption: nil,
 							},
 						},
 					},
@@ -281,12 +303,12 @@ func TestNewStruct(t *testing.T) {
 				prefix: "",
 				children: []Item{
 					FieldItem{
-						key:        "LOG_LEVEL",
-						tagOptions: nil,
+						key:       "LOG_LEVEL",
+						tagOption: nil,
 					},
 					FieldItem{
-						key:        "TIMEOUT",
-						tagOptions: nil,
+						key:       "TIMEOUT",
+						tagOption: nil,
 					},
 				},
 			},
@@ -302,20 +324,20 @@ func TestNewStruct(t *testing.T) {
 				prefix: "APP_",
 				children: []Item{
 					FieldItem{
-						key:        "APP_APP_NAME",
-						tagOptions: nil,
+						key:       "APP_APP_NAME",
+						tagOption: nil,
 					},
 					FieldItem{
-						key:        "APP_DEBUG",
-						tagOptions: nil,
+						key:       "APP_DEBUG",
+						tagOption: nil,
 					},
 					FieldItem{
-						key:        "APP_PI",
-						tagOptions: nil,
+						key:       "APP_PI",
+						tagOption: nil,
 					},
 					FieldItem{
-						key:        "APP_NUMBER",
-						tagOptions: nil,
+						key:       "APP_NUMBER",
+						tagOption: nil,
 					},
 				},
 			},
@@ -346,7 +368,7 @@ func TestNewStruct(t *testing.T) {
 }
 
 func compareStructItems(a, b StructItem) bool {
-	if a.prefix != b.prefix || !reflect.DeepEqual(a.tagOptions, b.tagOptions) || len(a.children) != len(b.children) {
+	if a.prefix != b.prefix || !reflect.DeepEqual(a.tagOption, b.tagOption) || len(a.children) != len(b.children) {
 		return false
 	}
 	for i, childA := range a.children {
@@ -367,7 +389,7 @@ func compareStructItems(a, b StructItem) bool {
 }
 
 func compareItems(a, b Item) bool {
-	if a.Key() != b.Key() || !reflect.DeepEqual(a.TagOptions(), b.TagOptions()) {
+	if a.Key() != b.Key() || !reflect.DeepEqual(a.TagOption(), b.TagOption()) {
 		return false
 	}
 	return true

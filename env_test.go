@@ -31,11 +31,11 @@ type BuildInConfig struct {
 }
 
 type ComplexConfig struct {
-	BoolArray    []bool        `env:"BOOL_ARRAY,delimiter=;"`
-	Float32Array []float32     `env:"FLOAT32_ARRAY,delimiter=;"`
-	Float64Array []float64     `env:"FLOAT64_ARRAY,delimiter=;"`
-	IntArray     []int         `env:"INT_ARRAY,delimiter=;"`
-	StringArray  []string      `env:"STRING_ARRAY,delimiter=;"`
+	BoolArray    []bool        `env:"BOOL_ARRAY;delimiter=,"`
+	Float32Array []float32     `env:"FLOAT32_ARRAY;delimiter= "`
+	Float64Array []float64     `env:"FLOAT64_ARRAY;delimiter=-"`
+	IntArray     []int         `env:"INT_ARRAY;delimiter=_"`
+	StringArray  []string      `env:"STRING_ARRAY;delimiter=|"`
 	Duration     time.Duration `env:"DURATION"`
 	Time         time.Time     `env:"TIME"`
 }
@@ -76,11 +76,11 @@ type NotSetConfig struct {
 	Int           int     `env:"INT"`
 	Uint          uint    `env:"UINT"`
 	String        string  `env:"STRING"`
-	DefaultInt    int     `env:"DEFAULT_INT,default=10"`
-	DefaultString string  `env:"DEFAULT_STRING,default=hello"`
-	DefaulUint    uint    `env:"DEFAULT_UINT,default=10"`
-	DefaultBool   bool    `env:"DEFAULT_BOOL,default=true"`
-	DefaultFloat  float64 `env:"DEFAULT_FLOAT,default=3.14"`
+	DefaultInt    int     `env:"DEFAULT_INT;default=10"`
+	DefaultString string  `env:"DEFAULT_STRING;default=hello"`
+	DefaulUint    uint    `env:"DEFAULT_UINT;default=10"`
+	DefaultBool   bool    `env:"DEFAULT_BOOL;default=true"`
+	DefaultFloat  float64 `env:"DEFAULT_FLOAT;default=3.14"`
 }
 
 type Scheduler struct {
@@ -132,11 +132,11 @@ func TestLoadConfig(t *testing.T) {
 					StringValue:  "hello",
 				},
 				ComplexConfig: &ComplexConfig{
-					BoolArray:    []bool{true, false},
-					Float32Array: []float32{3.14, 6.28},
-					Float64Array: []float64{3.14, 6.28},
-					IntArray:     []int{1, 2},
-					StringArray:  []string{"a", "b", "c"},
+					BoolArray:    []bool{true, false, false},
+					Float32Array: []float32{3.14, 6.28, 0.3},
+					Float64Array: []float64{3.14, 6.28, 12.2},
+					IntArray:     []int{1, 2, 3, 4, 5},
+					StringArray:  []string{"a", "b", "c", "d"},
 					Duration:     5 * time.Minute,
 					Time:         timeNow.Truncate(time.Second),
 				},
@@ -230,11 +230,11 @@ func setEnv(timeNow time.Time) func() {
 		"BUILD_IN_FLOAT64_VALUE": 3.14,
 		"BUILD_IN_INT_VALUE":     10,
 		"BUILD_IN_STRING_VALUE":  "hello",
-		"COMPLEX_BOOL_ARRAY":     "true,false",
-		"COMPLEX_FLOAT32_ARRAY":  "3.14,6.28",
-		"COMPLEX_FLOAT64_ARRAY":  "3.14,6.28",
-		"COMPLEX_INT_ARRAY":      "1,2",
-		"COMPLEX_STRING_ARRAY":   "a,b,c",
+		"COMPLEX_BOOL_ARRAY":     "true,false,false",
+		"COMPLEX_FLOAT32_ARRAY":  "3.14 6.28 0.3",
+		"COMPLEX_FLOAT64_ARRAY":  "3.14-6.28-12.2",
+		"COMPLEX_INT_ARRAY":      "1_2_3_4_5",
+		"COMPLEX_STRING_ARRAY":   "a|b|c|d",
 		"COMPLEX_DURATION":       "5m",
 		"COMPLEX_TIME":           timeNow.Format(time.RFC3339),
 		"SCHEDULER_INTERVAL":     "5m",

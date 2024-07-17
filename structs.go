@@ -2,6 +2,7 @@ package env_config
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 )
@@ -12,7 +13,6 @@ const (
 	// for more info.
 	DefaultTagName = "env" // struct field default tag name
 
-	Underscore = "_"
 )
 
 var (
@@ -21,40 +21,25 @@ var (
 )
 
 type Item interface {
-	TagOptions() []TagOption
+	TagOption() TagOption
 	Value() reflect.Value
 	Load() error
 	Key() string
-	print() string
 }
 
 type FieldItem struct {
-	raw        interface{}
-	value      reflect.Value
-	key        string
-	fieldName  string
-	tagOptions []TagOption
+	raw       interface{}
+	value     reflect.Value
+	key       string
+	tagOption TagOption
 }
 
 func (c FieldItem) Key() string {
 	return c.key
 }
 
-func (c FieldItem) print() string {
-	str := "value:" + c.value.String() + ", key:" + c.key
-	if c.tagOptions == nil {
-		return str
-	}
-	str += " tagOptions:{"
-	for _, tagOpt := range c.tagOptions {
-		str += tagOpt.String()
-	}
-
-	return str + "}"
-}
-
-func (c FieldItem) TagOptions() []TagOption {
-	return c.tagOptions
+func (c FieldItem) TagOption() TagOption {
+	return c.tagOption
 }
 
 func (c FieldItem) Value() reflect.Value {
@@ -62,14 +47,7 @@ func (c FieldItem) Value() reflect.Value {
 }
 
 func (c FieldItem) Load() error {
-	var defaultValue string
-	for _, opt := range c.TagOptions() {
-		if opt.key == DefaultTagKey {
-			defaultValue = opt.value
-		}
-	}
-
-	envValue := Env(c.key, defaultValue)
+	envValue := os.Getenv(c.key)
 
 	// Ensure we have the correct kind of value to set
 	value := c.value
@@ -92,15 +70,15 @@ func (c FieldItem) Load() error {
 		}
 	}
 
-	return strategy.SetValue(value, envValue)
+	return strategy.SetValue(value, envValue, c.TagOption())
 }
 
 type StructItem struct {
-	raw        interface{}
-	prefix     string
-	value      reflect.Value
-	tagOptions []TagOption
-	children   []Item
+	raw       interface{}
+	prefix    string
+	value     reflect.Value
+	tagOption TagOption
+	children  []Item
 }
 
 func (s StructItem) Load() error {
@@ -116,25 +94,8 @@ func (s StructItem) Key() string {
 	return ""
 }
 
-func (s StructItem) print() string {
-	str := "value:" + s.value.String()
-	if s.tagOptions != nil {
-		str += " tagOptions:{"
-		for _, tagOpt := range s.tagOptions {
-			str += tagOpt.String()
-		}
-		str += "}"
-	}
-
-	str += "\nChildrens: "
-	for _, child := range s.children {
-		str += "\n" + child.print()
-	}
-	return str
-}
-
-func (s StructItem) TagOptions() []TagOption {
-	return s.tagOptions
+func (s StructItem) TagOption() TagOption {
+	return s.tagOption
 }
 
 func (s StructItem) Value() reflect.Value {
@@ -163,7 +124,6 @@ func NewStruct(s interface{}, keyPrefix string) (StructItem, error) {
 			continue
 		}
 
-		envTag = strings.ReplaceAll(envTag, " ", "")
 		key, nestedTagOpts := parseTagAndKey(envTag)
 		key = combineKeyPrefix(keyPrefix, key)
 
@@ -200,15 +160,17 @@ func pointerVal(s interface{}) (reflect.Value, error) {
 	return val, nil
 }
 
-func parseTagAndKey(str string) (key string, tags []TagOption) {
-	tagStr := strings.Split(str, ",")
+func parseTagAndKey(str string) (key string, tag TagOption) {
+	tagStr := strings.Split(str, Semicolon)
 	if len(tagStr) <= 1 {
 		key = str
+		builder := DefaultOptionBuilder{}
+		tag = builder.Build()
 		return
 	}
 
-	key = tagStr[0]
-	tags = parseTag(strings.Join(tagStr[1:], ","))
+	key = strings.TrimSpace(tagStr[0])
+	tag = parseTag(strings.Join(tagStr[1:], Semicolon))
 	return
 }
 
