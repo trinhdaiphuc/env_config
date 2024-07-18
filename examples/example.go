@@ -10,13 +10,13 @@ import (
 )
 
 type Config struct {
-	Host      string        `env:"HOST,default=localhost"`
-	Port      int           `env:"PORT,default=8080"`
-	Bytes     []byte        `env:"ENV_BYTES,default=foo"`
-	Float32   float32       `env:"ENV_FLOAT,default=12.34"`
+	Host      string        `env:"HOST;default=localhost"`
+	Port      int           `env:"PORT;default=8080"`
+	Bytes     []byte        `env:"ENV_BYTES;default=foo,bar"`
+	Float32   float32       `env:"ENV_FLOAT;default=12.34"`
 	Timeout   time.Duration `env:"TIMEOUT"`
 	Date      time.Time     `env:"ENV_DATE"`
-	Addresses []string      `env:"ADDRESSES"`
+	Addresses []string      `env:"ADDRESSES;delimiter= "`
 	None      string
 }
 

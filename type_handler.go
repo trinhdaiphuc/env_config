@@ -6,7 +6,7 @@ import (
 )
 
 type TypeHandler interface {
-	Handle(key string, field reflect.Value, nestedTagOpts []TagOption) Item
+	Handle(key string, field reflect.Value, nestedTagOpts TagOption) Item
 }
 
 type TypeHandlerFactory struct {
@@ -25,10 +25,6 @@ func NewTypeHandlerFactory() *TypeHandlerFactory {
 	}
 }
 
-func (f *TypeHandlerFactory) RegisterHandler(t reflect.Type, handler TypeHandler) {
-	f.handlers[t] = handler
-}
-
 func (f *TypeHandlerFactory) GetHandler(t reflect.Type) TypeHandler {
 	if handler, ok := f.handlers[t]; ok {
 		return handler
@@ -44,25 +40,23 @@ func (f *TypeHandlerFactory) GetHandler(t reflect.Type) TypeHandler {
 
 type TimeHandler struct{}
 
-func (h TimeHandler) Handle(key string, field reflect.Value, nestedTagOpts []TagOption) Item {
+func (h TimeHandler) Handle(key string, field reflect.Value, nestedTagOpt TagOption) Item {
 	return FieldItem{
-		raw:        field.Interface(),
-		key:        key,
-		value:      field,
-		fieldName:  field.Type().Name(),
-		tagOptions: nestedTagOpts,
+		raw:       field.Interface(),
+		key:       key,
+		value:     field,
+		tagOption: nestedTagOpt,
 	}
 }
 
 type StructHandler struct{}
 
-func (h StructHandler) Handle(key string, field reflect.Value, _ []TagOption) Item {
+func (h StructHandler) Handle(key string, field reflect.Value, _ TagOption) Item {
 	if field.Kind() == reflect.Ptr {
 		field = field.Elem()
 	}
 	childStruct, err := NewStruct(field.Addr().Interface(), key)
 	if err != nil {
-		// Handle error appropriately
 		return nil
 	}
 	return childStruct
@@ -70,12 +64,11 @@ func (h StructHandler) Handle(key string, field reflect.Value, _ []TagOption) It
 
 type FieldHandler struct{}
 
-func (h FieldHandler) Handle(key string, field reflect.Value, nestedTagOpts []TagOption) Item {
+func (h FieldHandler) Handle(key string, field reflect.Value, nestedTagOpt TagOption) Item {
 	return FieldItem{
-		raw:        field.Interface(),
-		key:        key,
-		value:      field,
-		fieldName:  field.Type().Name(),
-		tagOptions: nestedTagOpts,
+		raw:       field.Interface(),
+		key:       key,
+		value:     field,
+		tagOption: nestedTagOpt,
 	}
 }
