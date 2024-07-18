@@ -12,6 +12,15 @@ type TypeStrategy interface {
 	SetValue(field reflect.Value, envValue string, tagOption TagOption) error
 }
 
+func RegisterStrategy(strategyType reflect.Type, strategy TypeStrategy) {
+	complexTypeStrategies[strategyType] = strategy
+}
+
+var (
+	complexTypeStrategies = make(map[reflect.Type]TypeStrategy)
+	buildInTypeStrategies = make(map[reflect.Kind]TypeStrategy)
+)
+
 type StringStrategy struct{}
 
 func (s StringStrategy) SetValue(field reflect.Value, envValue string, tagOption TagOption) error {
@@ -299,40 +308,41 @@ func parseOptionValues(envValue string, option TagOption) ([]string, error) {
 	valueArr, _ := value.([]string)
 	return valueArr, nil
 }
+func init() {
+	buildInTypeStrategies = map[reflect.Kind]TypeStrategy{
+		reflect.String:  StringStrategy{},
+		reflect.Int:     IntStrategy[int]{},
+		reflect.Int8:    IntStrategy[int8]{},
+		reflect.Int16:   IntStrategy[int16]{},
+		reflect.Int32:   IntStrategy[int32]{},
+		reflect.Int64:   IntStrategy[int64]{},
+		reflect.Uint:    UintStrategy[uint]{},
+		reflect.Uint8:   UintStrategy[uint8]{},
+		reflect.Uint16:  UintStrategy[uint16]{},
+		reflect.Uint32:  UintStrategy[uint32]{},
+		reflect.Uint64:  UintStrategy[uint64]{},
+		reflect.Float32: FloatStrategy[float32]{},
+		reflect.Float64: FloatStrategy[float64]{},
+		reflect.Bool:    BoolStrategy{},
+		reflect.Slice:   ByteSliceStrategy{},
+	}
 
-var buildInTypeStrategies = map[reflect.Kind]TypeStrategy{
-	reflect.String:  StringStrategy{},
-	reflect.Int:     IntStrategy[int]{},
-	reflect.Int8:    IntStrategy[int8]{},
-	reflect.Int16:   IntStrategy[int16]{},
-	reflect.Int32:   IntStrategy[int32]{},
-	reflect.Int64:   IntStrategy[int64]{},
-	reflect.Uint:    UintStrategy[uint]{},
-	reflect.Uint8:   UintStrategy[uint8]{},
-	reflect.Uint16:  UintStrategy[uint16]{},
-	reflect.Uint32:  UintStrategy[uint32]{},
-	reflect.Uint64:  UintStrategy[uint64]{},
-	reflect.Float32: FloatStrategy[float32]{},
-	reflect.Float64: FloatStrategy[float64]{},
-	reflect.Bool:    BoolStrategy{},
-	reflect.Slice:   ByteSliceStrategy{},
-}
-
-var complexTypeStrategies = map[reflect.Type]TypeStrategy{
-	reflect.TypeOf(time.Duration(0)): DurationStrategy{},
-	reflect.TypeOf(time.Time{}):      TimeStrategy{},
-	reflect.TypeOf([]string{}):       StringSliceStrategy{},
-	reflect.TypeOf([]bool{}):         BoolSliceStrategy{},
-	reflect.TypeOf([]int{}):          IntSliceStrategy[int]{},
-	reflect.TypeOf([]int8{}):         IntSliceStrategy[int8]{},
-	reflect.TypeOf([]int16{}):        IntSliceStrategy[int16]{},
-	reflect.TypeOf([]int32{}):        IntSliceStrategy[int32]{},
-	reflect.TypeOf([]int64{}):        IntSliceStrategy[int64]{},
-	reflect.TypeOf([]uint{}):         UintSliceStrategy[uint]{},
-	reflect.TypeOf([]uint8{}):        UintSliceStrategy[uint8]{},
-	reflect.TypeOf([]uint16{}):       UintSliceStrategy[uint16]{},
-	reflect.TypeOf([]uint32{}):       UintSliceStrategy[uint32]{},
-	reflect.TypeOf([]uint64{}):       UintSliceStrategy[uint64]{},
-	reflect.TypeOf([]float64{}):      FloatSliceStrategy[float64]{},
-	reflect.TypeOf([]float32{}):      FloatSliceStrategy[float32]{},
+	complexTypeStrategies = map[reflect.Type]TypeStrategy{
+		reflect.TypeOf(time.Duration(0)): DurationStrategy{},
+		reflect.TypeOf(time.Time{}):      TimeStrategy{},
+		reflect.TypeOf([]string{}):       StringSliceStrategy{},
+		reflect.TypeOf([]bool{}):         BoolSliceStrategy{},
+		reflect.TypeOf([]int{}):          IntSliceStrategy[int]{},
+		reflect.TypeOf([]int8{}):         IntSliceStrategy[int8]{},
+		reflect.TypeOf([]int16{}):        IntSliceStrategy[int16]{},
+		reflect.TypeOf([]int32{}):        IntSliceStrategy[int32]{},
+		reflect.TypeOf([]int64{}):        IntSliceStrategy[int64]{},
+		reflect.TypeOf([]uint{}):         UintSliceStrategy[uint]{},
+		reflect.TypeOf([]uint8{}):        UintSliceStrategy[uint8]{},
+		reflect.TypeOf([]uint16{}):       UintSliceStrategy[uint16]{},
+		reflect.TypeOf([]uint32{}):       UintSliceStrategy[uint32]{},
+		reflect.TypeOf([]uint64{}):       UintSliceStrategy[uint64]{},
+		reflect.TypeOf([]float64{}):      FloatSliceStrategy[float64]{},
+		reflect.TypeOf([]float32{}):      FloatSliceStrategy[float32]{},
+	}
 }

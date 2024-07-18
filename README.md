@@ -1,85 +1,132 @@
 # env_config
 
-> Load environment config and utilities for getting default environment variables, whether they exist or not.
+`env_config` is a Go package designed to simplify the process of loading configuration values from environment variables into your application's structs. This package supports various data types, including custom and complex types, and allows for the use of tag options to customize the behavior of value parsing.
 
-## Install
+## Features
 
-```shell
-go get -u github.com/trinhdaiphuc/env_config
+- Load configuration from environment variables directly into structs.
+- Supports basic types like `string`, `int`, `uint`, `float`, `bool`, and their slices.
+- Supports complex types like `time.Duration` and `time.Time`.
+- Customizable tag options to control how environment variables are parsed and set.
+
+## Installation
+
+```bash
+go get github.com/trinhdaiphuc/env_config
 ```
 
 ## Usage
 
-To configure your application using environment variables, define your struct fields with the `env` tag. This tag allows you to specify the environment variable name, a default value if the environment variable is not set, and a delimiter for parsing slice types. The format for the tag is as follows:
+### Basic Usage
 
-`env:"{env_variable};default={default_value};delimiter={delimiter_value}"`
-
-```go
-type Config struct {
-    Host        string        `env:"HOST,default=localhost"`
-    Port        int           `env:"PORT,default=8080"`
-    Bytes       []byte        `env:"ENV_BYTES,default=foo"`
-    Float32     float32       `env:"ENV_FLOAT,default=12.34"`
-    None        string
-    Timeout     time.Duration `env:"TIMEOUT"`
-    Date        time.Time     `env:"ENV_DATE"`
-    StringSlice []string      `env:"STRING_SLICE,default=foo,bar"`
-    FloatSlice  []float64     `env:"FLOAT_SLICE,default=1.1,2.2,3.3"`
-}
-```
-
-The library will get the environment value from `env_variable`. If the value is empty, it will use the `default_value` you describe. Example:
-
-Use a `.env` file to define environments easily:
-
-```dotenv
-HOST=127.0.0.1
-PORT=8081
-ENV_BYTES=foo
-ENV_FLOAT=
-TIMEOUT=5s
-ENV_DATE=2021-08-07T15:04:05Z
-STRING_SLICE=foo,bar,baz
-FLOAT_SLICE=1.1,2.2,3.3
-```
-
-You can load these environments into your config struct. [example.go](./examples/example.go):
+Define your configuration struct and use the `env` tag to specify the environment variable names:
 
 ```go
 package main
 
 import (
-    "fmt"
-    _ "github.com/joho/godotenv/autoload"
-    "github.com/trinhdaiphuc/env_config"
-    "time"
+	"fmt"
+	"log"
+	"github.com/trinhdaiphuc/env_config"
 )
 
 type Config struct {
-    Host        string        `env:"HOST,default=localhost"`
-    Port        int           `env:"PORT,default=8080"`
-    Bytes       []byte        `env:"ENV_BYTES,default=foo"`
-    Float32     float32       `env:"ENV_FLOAT,default=12.34"`
-    None        string
-    Timeout     time.Duration `env:"TIMEOUT"`
-    Date        time.Time     `env:"ENV_DATE"`
-    StringSlice []string      `env:"STRING_SLICE,default=foo,bar"`
-    FloatSlice  []float64     `env:"FLOAT_SLICE,default=1.1,2.2,3.3"`
+	Port        int           `env:"PORT"`
+	DatabaseURL string        `env:"DATABASE_URL"`
+	Debug       bool          `env:"DEBUG"`
+	Timeout     time.Duration `env:"TIMEOUT"`
 }
 
 func main() {
-    cfg := &Config{}
-    if err := env_config.EnvStruct(cfg); err != nil {
-        panic(err)
-    }
-    fmt.Printf("Config %+v\n", cfg)
+	var config Config
+	if err := env_config.Load(&config); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", config)
 }
 ```
 
-Now you can run `example.go` to check this:
+### Tag Options
 
-```shell
-go run examples/example.go
+You can customize the parsing behavior using tag options. For example, you can specify a default value or a delimiter for slice types.
 
-Config &{127.0.0.1 8081 [102 111 111] 12.34  5s 2021-08-07 15:04:05 +0000 UTC [foo bar baz] [1.1 2.2 3.3]}
+```go
+type Config struct {
+	Port        int           `env:"PORT;default=8080"`
+	DatabaseURL string        `env:"DATABASE_URL"`
+	Debug       bool          `env:"DEBUG;default=false"`
+	Timeout     time.Duration `env:"TIMEOUT;default=5s"`
+	Hosts       []string      `env:"HOSTS;delimiter=,"`
+}
 ```
+
+### Supported Types
+
+The package supports the following types:
+
+- `string`
+- `int`, `int8`, `int16`, `int32`, `int64`
+- `uint`, `uint8`, `uint16`, `uint32`, `uint64`
+- `float32`, `float64`
+- `bool`
+- `[]string`
+- `[]int`, `[]int8`, `[]int16`, `[]int32`, `[]int64`
+- `[]uint`, `[]uint8`, `[]uint16`, `[]uint32`, `[]uint64`
+- `[]float32`, `[]float64`
+- `[]bool`
+- `time.Duration`
+- `time.Time` (parsed using `time.RFC3339` format)
+
+## Custom Strategies
+
+If you need to support custom types, you can implement the `TypeStrategy` interface and register your custom strategy.
+
+```go
+type CustomType struct {
+	// Your fields here
+}
+
+type CustomTypeStrategy struct{}
+
+func (s CustomTypeStrategy) SetValue(field reflect.Value, envValue string, tagOption TagOption) error {
+	// Your custom parsing logic here
+}
+
+func main() {
+	env_config.RegisterStrategy(reflect.TypeOf(CustomType{}), CustomTypeStrategy{})
+	// Now you can use CustomType in your config struct
+}
+```
+
+## Error Handling
+
+The `Load` function returns an error if any required environment variables are missing or if any values cannot be parsed. You can handle these errors as needed in your application.
+
+## Testing
+
+To test your configuration loading logic, you can set environment variables in your test cases and use the `Load` function as usual.
+
+```go
+func TestConfigLoading(t *testing.T) {
+	os.Setenv("PORT", "8080")
+	os.Setenv("DATABASE_URL", "postgres://user:pass@localhost:5432/db")
+	os.Setenv("DEBUG", "true")
+	os.Setenv("TIMEOUT", "10s")
+	os.Setenv("HOSTS", "host1,host2,host3")
+
+	var config Config
+	if err := env_config.Load(&config); err != nil {
+		t.Fatal(err)
+	}
+
+	// Add your assertions here
+}
+```
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request on GitHub.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

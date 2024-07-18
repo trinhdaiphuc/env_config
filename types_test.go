@@ -872,3 +872,54 @@ func TestFloatSliceStrategy_SetValue(t *testing.T) {
 		})
 	}
 }
+
+// Define a custom type and strategy for testing
+type customType struct {
+	Value string
+}
+
+type customTypeStrategy struct{}
+
+func (s customTypeStrategy) SetValue(field reflect.Value, envValue string, tagOption TagOption) error {
+	field.Set(reflect.ValueOf(customType{Value: envValue}))
+	return nil
+}
+func TestRegisterStrategy(t *testing.T) {
+	type args struct {
+		strategyType reflect.Type
+		strategy     TypeStrategy
+	}
+	tests := []struct {
+		name           string
+		args           args
+		wantErr        bool
+		wantRegistered bool
+	}{
+		{
+			name: "Register custom strategy",
+			args: args{
+				strategyType: reflect.TypeOf(customType{}),
+				strategy:     customTypeStrategy{},
+			},
+			wantErr:        false,
+			wantRegistered: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			RegisterStrategy(tt.args.strategyType, tt.args.strategy)
+
+			registeredStrategy, exists := complexTypeStrategies[tt.args.strategyType]
+			if exists != tt.wantRegistered {
+				t.Errorf("expected registered = %v, got %v", tt.wantRegistered, exists)
+			}
+
+			if tt.wantRegistered {
+				if !reflect.DeepEqual(registeredStrategy, tt.args.strategy) {
+					t.Errorf("expected strategy = %v, got %v", tt.args.strategy, registeredStrategy)
+				}
+			}
+		})
+	}
+}
