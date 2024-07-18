@@ -35,6 +35,15 @@ type ComplexConfig struct {
 	Float32Array []float32     `env:"FLOAT32_ARRAY;delimiter= "`
 	Float64Array []float64     `env:"FLOAT64_ARRAY;delimiter=-"`
 	IntArray     []int         `env:"INT_ARRAY;delimiter=_"`
+	Int8Array    []int8        `env:"INT8_ARRAY;delimiter=|"`
+	Int16Array   []int16       `env:"INT16_ARRAY;delimiter=|"`
+	Int32Array   []int32       `env:"INT32_ARRAY;delimiter=|"`
+	Int64Array   []int64       `env:"INT64_ARRAY;delimiter=|"`
+	UintArray    []uint        `env:"UINT_ARRAY;delimiter=|"`
+	Uint8Array   []uint8       `env:"UINT8_ARRAY;delimiter=|"`
+	Uint16Array  []uint16      `env:"UINT16_ARRAY;delimiter=|"`
+	Uint32Array  []uint32      `env:"UINT32_ARRAY;delimiter=|"`
+	Uint64Array  []uint64      `env:"UINT64_ARRAY;delimiter=|"`
 	StringArray  []string      `env:"STRING_ARRAY;delimiter=|"`
 	Duration     time.Duration `env:"DURATION"`
 	Time         time.Time     `env:"TIME"`
@@ -69,18 +78,19 @@ type Logger struct {
 }
 
 type NotSetConfig struct {
-	Name          string  `env:"NAME"`
-	Float32       float32 `env:"FLOAT32"`
-	Float64       float64 `env:"FLOAT64"`
-	Bool          bool    `env:"BOOL"`
-	Int           int     `env:"INT"`
-	Uint          uint    `env:"UINT"`
-	String        string  `env:"STRING"`
-	DefaultInt    int     `env:"DEFAULT_INT;default=10"`
-	DefaultString string  `env:"DEFAULT_STRING;default=hello"`
-	DefaulUint    uint    `env:"DEFAULT_UINT;default=10"`
-	DefaultBool   bool    `env:"DEFAULT_BOOL;default=true"`
-	DefaultFloat  float64 `env:"DEFAULT_FLOAT;default=3.14"`
+	Name          string   `env:"NAME"`
+	Float32       float32  `env:"FLOAT32"`
+	Float64       float64  `env:"FLOAT64"`
+	Bool          bool     `env:"BOOL"`
+	Int           int      `env:"INT"`
+	Uint          uint     `env:"UINT"`
+	String        string   `env:"STRING"`
+	StringSlice   []string `env:"STRING_SLICE"`
+	DefaultInt    int      `env:"DEFAULT_INT;default=10"`
+	DefaultString string   `env:"DEFAULT_STRING;default=hello"`
+	DefaultUint   uint     `env:"DEFAULT_UINT;default=10"`
+	DefaultBool   bool     `env:"DEFAULT_BOOL;default=true"`
+	DefaultFloat  float64  `env:"DEFAULT_FLOAT;default=3.14"`
 }
 
 type Scheduler struct {
@@ -136,6 +146,15 @@ func TestLoadConfig(t *testing.T) {
 					Float32Array: []float32{3.14, 6.28, 0.3},
 					Float64Array: []float64{3.14, 6.28, 12.2},
 					IntArray:     []int{1, 2, 3, 4, 5},
+					Int8Array:    []int8{1, 2, 3, 4, 5},
+					Int16Array:   []int16{1, 2, 3, 4, 5},
+					Int32Array:   []int32{1, 2, 3, 4, 5},
+					Int64Array:   []int64{1, 2, 3, 4, 5},
+					UintArray:    []uint{1, 2, 3, 4, 5},
+					Uint8Array:   []uint8{1, 2, 3, 4, 5},
+					Uint16Array:  []uint16{1, 2, 3, 4, 5},
+					Uint32Array:  []uint32{1, 2, 3, 4, 5},
+					Uint64Array:  []uint64{1, 2, 3, 4, 5},
 					StringArray:  []string{"a", "b", "c", "d"},
 					Duration:     5 * time.Minute,
 					Time:         timeNow.Truncate(time.Second),
@@ -182,9 +201,10 @@ func TestLoadConfig(t *testing.T) {
 					Int:           0,
 					Uint:          0,
 					String:        "",
+					StringSlice:   nil,
 					DefaultInt:    10,
 					DefaultString: "hello",
-					DefaulUint:    10,
+					DefaultUint:   10,
 					DefaultBool:   true,
 					DefaultFloat:  3.14,
 				},
@@ -234,6 +254,15 @@ func setEnv(timeNow time.Time) func() {
 		"COMPLEX_FLOAT32_ARRAY":  "3.14 6.28 0.3",
 		"COMPLEX_FLOAT64_ARRAY":  "3.14-6.28-12.2",
 		"COMPLEX_INT_ARRAY":      "1_2_3_4_5",
+		"COMPLEX_INT8_ARRAY":     "1|2|3|4|5",
+		"COMPLEX_INT16_ARRAY":    "1|2|3|4|5",
+		"COMPLEX_INT32_ARRAY":    "1|2|3|4|5",
+		"COMPLEX_INT64_ARRAY":    "1|2|3|4|5",
+		"COMPLEX_UINT_ARRAY":     "1|2|3|4|5",
+		"COMPLEX_UINT8_ARRAY":    "1|2|3|4|5",
+		"COMPLEX_UINT16_ARRAY":   "1|2|3|4|5",
+		"COMPLEX_UINT32_ARRAY":   "1|2|3|4|5",
+		"COMPLEX_UINT64_ARRAY":   "1|2|3|4|5",
 		"COMPLEX_STRING_ARRAY":   "a|b|c|d",
 		"COMPLEX_DURATION":       "5m",
 		"COMPLEX_TIME":           timeNow.Format(time.RFC3339),

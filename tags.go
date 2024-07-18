@@ -54,7 +54,7 @@ type DelimiterOptionBuilder struct{}
 func (d *DelimiterOptionBuilder) Build() TagOption {
 	return &DelimiterOption{
 		BaseTagOption: BaseTagOption{},
-		Delimiter:     ",",
+		Delimiter:     Comma,
 	}
 }
 
@@ -121,7 +121,11 @@ func (d *DelimiterOption) Apply(value string) (interface{}, error) {
 		d.Delimiter = ","
 	}
 
-	return strings.Split(value, d.Delimiter), nil
+	strArray := strings.Split(value, d.Delimiter)
+	if len(strArray) == 1 && strArray[0] == "" {
+		return d.BaseTagOption.Apply(value)
+	}
+	return strArray, nil
 }
 
 func (d *DelimiterOption) Priority() int {

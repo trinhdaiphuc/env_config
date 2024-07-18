@@ -16,7 +16,7 @@ type Config struct {
 	Float32   float32       `env:"ENV_FLOAT;default=12.34"`
 	Timeout   time.Duration `env:"TIMEOUT"`
 	Date      time.Time     `env:"ENV_DATE"`
-	Addresses []string      `env:"ADDRESSES"`
+	Addresses []string      `env:"ADDRESSES;delimiter= "`
 	None      string
 }
 
