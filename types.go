@@ -198,6 +198,7 @@ func (s StringSliceStrategy) SetValue(v reflect.Value, envValue string, tagOptio
 		return fmt.Errorf("invalid type, expected []string but got %s", v.Kind())
 	}
 
+	tagOption = setStringSliceDefaultTagOption(tagOption)
 	values, err := parseOptionValues(envValue, tagOption)
 	if err != nil {
 		return err
@@ -205,6 +206,28 @@ func (s StringSliceStrategy) SetValue(v reflect.Value, envValue string, tagOptio
 
 	v.Set(reflect.ValueOf(values))
 	return nil
+}
+
+func setStringSliceDefaultTagOption(tagOption TagOption) TagOption {
+	if tagOption == nil {
+		return tagOption
+	}
+
+	tag := tagOption
+	hasDelimiter := false
+	for tag != nil {
+		if _, ok := tag.(*DelimiterOption); ok {
+			hasDelimiter = true
+			break
+		}
+		tag = tag.Next()
+	}
+
+	if !hasDelimiter {
+		tagOption.SetNext(defaultTagOption())
+	}
+
+	return tagOption
 }
 
 type BoolSliceStrategy struct{}

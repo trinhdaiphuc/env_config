@@ -10,6 +10,7 @@ type TagOption interface {
 	Apply(value string) (interface{}, error)
 	SetValue(value string)
 	SetNext(option TagOption)
+	Next() TagOption
 }
 
 type TagOptionPriority interface {
@@ -84,6 +85,10 @@ type DefaultOption struct {
 	DefaultValue string
 }
 
+func (d *DefaultOption) Next() TagOption {
+	return d.next
+}
+
 func (d *DefaultOption) SetValue(value string) {
 	d.DefaultValue = value
 }
@@ -106,6 +111,10 @@ func (d *DefaultOption) Priority() int {
 type DelimiterOption struct {
 	BaseTagOption
 	Delimiter string
+}
+
+func (d *DelimiterOption) Next() TagOption {
+	return d.next
 }
 
 func (d *DelimiterOption) SetValue(value string) {

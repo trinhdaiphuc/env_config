@@ -17,7 +17,8 @@ type Config struct {
 	Timeout   time.Duration `env:"TIMEOUT"`
 	Date      time.Time     `env:"ENV_DATE"`
 	Addresses []string      `env:"ADDRESSES;delimiter= "`
-	None      string
+	Strings   []string      `env:"STRINGS;default=foo,bar"`
+	None      string        `env:"NONE;default=none"`
 }
 
 func main() {

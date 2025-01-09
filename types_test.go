@@ -9,6 +9,10 @@ import (
 
 type tagOptionError struct{}
 
+func (t tagOptionError) Next() TagOption {
+	return nil
+}
+
 func (t tagOptionError) Apply(value string) (interface{}, error) {
 	return nil, errors.New("error")
 }

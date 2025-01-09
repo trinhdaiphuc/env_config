@@ -31,22 +31,25 @@ type BuildInConfig struct {
 }
 
 type ComplexConfig struct {
-	BoolArray    []bool        `env:"BOOL_ARRAY;delimiter=,"`
-	Float32Array []float32     `env:"FLOAT32_ARRAY;delimiter= "`
-	Float64Array []float64     `env:"FLOAT64_ARRAY;delimiter=-"`
-	IntArray     []int         `env:"INT_ARRAY;delimiter=_"`
-	Int8Array    []int8        `env:"INT8_ARRAY;delimiter=|"`
-	Int16Array   []int16       `env:"INT16_ARRAY;delimiter=|"`
-	Int32Array   []int32       `env:"INT32_ARRAY;delimiter=|"`
-	Int64Array   []int64       `env:"INT64_ARRAY;delimiter=|"`
-	UintArray    []uint        `env:"UINT_ARRAY;delimiter=|"`
-	Uint8Array   []uint8       `env:"UINT8_ARRAY;delimiter=|"`
-	Uint16Array  []uint16      `env:"UINT16_ARRAY;delimiter=|"`
-	Uint32Array  []uint32      `env:"UINT32_ARRAY;delimiter=|"`
-	Uint64Array  []uint64      `env:"UINT64_ARRAY;delimiter=|"`
-	StringArray  []string      `env:"STRING_ARRAY;delimiter=|"`
-	Duration     time.Duration `env:"DURATION"`
-	Time         time.Time     `env:"TIME"`
+	BoolArray                      []bool        `env:"BOOL_ARRAY;delimiter=,"`
+	Float32Array                   []float32     `env:"FLOAT32_ARRAY;delimiter= "`
+	Float64Array                   []float64     `env:"FLOAT64_ARRAY;delimiter=-"`
+	IntArray                       []int         `env:"INT_ARRAY;delimiter=_"`
+	Int8Array                      []int8        `env:"INT8_ARRAY;delimiter=|"`
+	Int16Array                     []int16       `env:"INT16_ARRAY;delimiter=|"`
+	Int32Array                     []int32       `env:"INT32_ARRAY;delimiter=|"`
+	Int64Array                     []int64       `env:"INT64_ARRAY;delimiter=|"`
+	UintArray                      []uint        `env:"UINT_ARRAY;delimiter=|"`
+	Uint8Array                     []uint8       `env:"UINT8_ARRAY;delimiter=|"`
+	Uint16Array                    []uint16      `env:"UINT16_ARRAY;delimiter=|"`
+	Uint32Array                    []uint32      `env:"UINT32_ARRAY;delimiter=|"`
+	Uint64Array                    []uint64      `env:"UINT64_ARRAY;delimiter=|"`
+	StringArray                    []string      `env:"STRING_ARRAY;delimiter=|"`
+	StringArrayDefault             []string      `env:"STRING_ARRAY_DEFAULT;default=a,b,c,d"`
+	StringArrayDefaultDelimiter    []string      `env:"STRING_ARRAY_DEFAULT_DELIMITER;default=a b c d;delimiter= "`
+	StringArrayDefaultDelimiterEnv []string      `env:"STRING_ARRAY_DEFAULT_DELIMITER_ENV;default=a b c d;delimiter= "`
+	Duration                       time.Duration `env:"DURATION"`
+	Time                           time.Time     `env:"TIME"`
 }
 
 type EmptyConfig struct {
@@ -142,22 +145,25 @@ func TestLoadConfig(t *testing.T) {
 					StringValue:  "hello",
 				},
 				ComplexConfig: &ComplexConfig{
-					BoolArray:    []bool{true, false, false},
-					Float32Array: []float32{3.14, 6.28, 0.3},
-					Float64Array: []float64{3.14, 6.28, 12.2},
-					IntArray:     []int{1, 2, 3, 4, 5},
-					Int8Array:    []int8{1, 2, 3, 4, 5},
-					Int16Array:   []int16{1, 2, 3, 4, 5},
-					Int32Array:   []int32{1, 2, 3, 4, 5},
-					Int64Array:   []int64{1, 2, 3, 4, 5},
-					UintArray:    []uint{1, 2, 3, 4, 5},
-					Uint8Array:   []uint8{1, 2, 3, 4, 5},
-					Uint16Array:  []uint16{1, 2, 3, 4, 5},
-					Uint32Array:  []uint32{1, 2, 3, 4, 5},
-					Uint64Array:  []uint64{1, 2, 3, 4, 5},
-					StringArray:  []string{"a", "b", "c", "d"},
-					Duration:     5 * time.Minute,
-					Time:         timeNow.Truncate(time.Second),
+					BoolArray:                      []bool{true, false, false},
+					Float32Array:                   []float32{3.14, 6.28, 0.3},
+					Float64Array:                   []float64{3.14, 6.28, 12.2},
+					IntArray:                       []int{1, 2, 3, 4, 5},
+					Int8Array:                      []int8{1, 2, 3, 4, 5},
+					Int16Array:                     []int16{1, 2, 3, 4, 5},
+					Int32Array:                     []int32{1, 2, 3, 4, 5},
+					Int64Array:                     []int64{1, 2, 3, 4, 5},
+					UintArray:                      []uint{1, 2, 3, 4, 5},
+					Uint8Array:                     []uint8{1, 2, 3, 4, 5},
+					Uint16Array:                    []uint16{1, 2, 3, 4, 5},
+					Uint32Array:                    []uint32{1, 2, 3, 4, 5},
+					Uint64Array:                    []uint64{1, 2, 3, 4, 5},
+					StringArray:                    []string{"a", "b", "c", "d"},
+					StringArrayDefault:             []string{"a", "b", "c", "d"},
+					StringArrayDefaultDelimiter:    []string{"a", "b", "c", "d"},
+					StringArrayDefaultDelimiterEnv: []string{"x", "y", "z", "t"},
+					Duration:                       5 * time.Minute,
+					Time:                           timeNow.Truncate(time.Second),
 				},
 				Scheduler: &Scheduler{
 					TimeInterval: 5 * time.Minute,
@@ -245,43 +251,44 @@ func TestLoadConfig(t *testing.T) {
 
 func setEnv(timeNow time.Time) func() {
 	envMap := map[string]interface{}{
-		"BUILD_IN_BOOL_VALUE":    true,
-		"BUILD_IN_FLOAT32_VALUE": 3.14,
-		"BUILD_IN_FLOAT64_VALUE": 3.14,
-		"BUILD_IN_INT_VALUE":     10,
-		"BUILD_IN_STRING_VALUE":  "hello",
-		"COMPLEX_BOOL_ARRAY":     "true,false,false",
-		"COMPLEX_FLOAT32_ARRAY":  "3.14 6.28 0.3",
-		"COMPLEX_FLOAT64_ARRAY":  "3.14-6.28-12.2",
-		"COMPLEX_INT_ARRAY":      "1_2_3_4_5",
-		"COMPLEX_INT8_ARRAY":     "1|2|3|4|5",
-		"COMPLEX_INT16_ARRAY":    "1|2|3|4|5",
-		"COMPLEX_INT32_ARRAY":    "1|2|3|4|5",
-		"COMPLEX_INT64_ARRAY":    "1|2|3|4|5",
-		"COMPLEX_UINT_ARRAY":     "1|2|3|4|5",
-		"COMPLEX_UINT8_ARRAY":    "1|2|3|4|5",
-		"COMPLEX_UINT16_ARRAY":   "1|2|3|4|5",
-		"COMPLEX_UINT32_ARRAY":   "1|2|3|4|5",
-		"COMPLEX_UINT64_ARRAY":   "1|2|3|4|5",
-		"COMPLEX_STRING_ARRAY":   "a|b|c|d",
-		"COMPLEX_DURATION":       "5m",
-		"COMPLEX_TIME":           timeNow.Format(time.RFC3339),
-		"SCHEDULER_INTERVAL":     "5m",
-		"SCHEDULER_START_AT":     timeNow.Format(time.RFC3339),
-		"SERVER_REDIS_HOST":      "127.0.0.1",
-		"SERVER_REDIS_PORT":      6379,
-		"SERVER_REDIS_PASSWORD":  "secret",
-		"APP_DB_HOST":            "localhost",
-		"APP_DB_PORT":            3306,
-		"APP_DB_USER":            "root",
-		"APP_DB_PASS":            "password",
-		"UN_INIT_LOG_LEVEL":      "info",
-		"UN_INIT_TIMEOUT":        10,
-		"TAG_APP_NAME":           "env_config",
-		"TAG_DEBUG":              true,
-		"TAG_PI":                 3.14,
-		"LOGGER_LEVEL":           "debug",
-		"LOGGER_ENCODER":         "json",
+		"BUILD_IN_BOOL_VALUE":                        true,
+		"BUILD_IN_FLOAT32_VALUE":                     3.14,
+		"BUILD_IN_FLOAT64_VALUE":                     3.14,
+		"BUILD_IN_INT_VALUE":                         10,
+		"BUILD_IN_STRING_VALUE":                      "hello",
+		"COMPLEX_BOOL_ARRAY":                         "true,false,false",
+		"COMPLEX_FLOAT32_ARRAY":                      "3.14 6.28 0.3",
+		"COMPLEX_FLOAT64_ARRAY":                      "3.14-6.28-12.2",
+		"COMPLEX_INT_ARRAY":                          "1_2_3_4_5",
+		"COMPLEX_INT8_ARRAY":                         "1|2|3|4|5",
+		"COMPLEX_INT16_ARRAY":                        "1|2|3|4|5",
+		"COMPLEX_INT32_ARRAY":                        "1|2|3|4|5",
+		"COMPLEX_INT64_ARRAY":                        "1|2|3|4|5",
+		"COMPLEX_UINT_ARRAY":                         "1|2|3|4|5",
+		"COMPLEX_UINT8_ARRAY":                        "1|2|3|4|5",
+		"COMPLEX_UINT16_ARRAY":                       "1|2|3|4|5",
+		"COMPLEX_UINT32_ARRAY":                       "1|2|3|4|5",
+		"COMPLEX_UINT64_ARRAY":                       "1|2|3|4|5",
+		"COMPLEX_STRING_ARRAY":                       "a|b|c|d",
+		"COMPLEX_DURATION":                           "5m",
+		"COMPLEX_TIME":                               timeNow.Format(time.RFC3339),
+		"COMPLEX_STRING_ARRAY_DEFAULT_DELIMITER_ENV": "x y z t",
+		"SCHEDULER_INTERVAL":                         "5m",
+		"SCHEDULER_START_AT":                         timeNow.Format(time.RFC3339),
+		"SERVER_REDIS_HOST":                          "127.0.0.1",
+		"SERVER_REDIS_PORT":                          6379,
+		"SERVER_REDIS_PASSWORD":                      "secret",
+		"APP_DB_HOST":                                "localhost",
+		"APP_DB_PORT":                                3306,
+		"APP_DB_USER":                                "root",
+		"APP_DB_PASS":                                "password",
+		"UN_INIT_LOG_LEVEL":                          "info",
+		"UN_INIT_TIMEOUT":                            10,
+		"TAG_APP_NAME":                               "env_config",
+		"TAG_DEBUG":                                  true,
+		"TAG_PI":                                     3.14,
+		"LOGGER_LEVEL":                               "debug",
+		"LOGGER_ENCODER":                             "json",
 	}
 
 	for env, val := range envMap {
