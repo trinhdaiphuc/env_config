@@ -121,7 +121,7 @@ func TestLoadConfig(t *testing.T) {
 	}
 
 	var (
-		timeNow = time.Now()
+		timeNow = time.Now().UTC()
 	)
 	clean := setEnv(timeNow)
 	defer clean()
