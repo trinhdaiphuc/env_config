@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type tagOptionError struct{}
@@ -920,9 +922,7 @@ func TestRegisterStrategy(t *testing.T) {
 			}
 
 			if tt.wantRegistered {
-				if !reflect.DeepEqual(registeredStrategy, tt.args.strategy) {
-					t.Errorf("expected strategy = %v, got %v", tt.args.strategy, registeredStrategy)
-				}
+				assert.Equalf(t, registeredStrategy, tt.args.strategy, "expected strategy = %v, got %v", tt.args.strategy, registeredStrategy)
 			}
 		})
 	}

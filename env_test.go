@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"reflect"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type Config struct {
@@ -242,9 +243,7 @@ func TestLoadConfig(t *testing.T) {
 				t.Errorf("LoadConfig() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			if !reflect.DeepEqual(tt.args.cfg, tt.wantCfg) {
-				t.Errorf("LoadConfig() \ngot  = %v \nwant = %v", toJSONStr(tt.args.cfg), toJSONStr(tt.wantCfg))
-			}
+			assert.Equalf(t, tt.args.cfg, tt.wantCfg, "LoadConfig() = %v, want %v", toJSONStr(tt.args.cfg), toJSONStr(tt.wantCfg))
 		})
 	}
 }

@@ -4,6 +4,8 @@ import (
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParseTagAndKey(t *testing.T) {
@@ -59,9 +61,7 @@ func TestParseTagAndKey(t *testing.T) {
 				t.Errorf("Expected key %s, got %s", tt.expectedKey, key)
 			}
 
-			if !reflect.DeepEqual(tagOption, tt.expectedTags) {
-				t.Errorf("Expected tag options %v, got %v", tt.expectedTags, tagOption)
-			}
+			assert.Equalf(t, tagOption, tt.expectedTags, "Expected tag options %v, got %v", tt.expectedTags, tagOption)
 		})
 	}
 }
