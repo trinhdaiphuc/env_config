@@ -39,7 +39,7 @@ type Config struct {
 
 func main() {
 	var config Config
-	if err := env_config.Load(&config); err != nil {
+	if err := env_config.LoadConfig(&config); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", config)
@@ -98,6 +98,18 @@ func main() {
 }
 ```
 
+## Optional Fields
+
+A pointer field is left `nil` when nothing provides a value for it, so `cfg.Section != nil` tells
+you the section was actually configured:
+
+```go
+type Config struct {
+	Tracing *TracingConfig `env:"TRACING"` // nil unless a TRACING_* variable (or a default) is set
+	Level   *string        `env:"LEVEL"`   // nil unless LEVEL is set
+}
+```
+
 ## Error Handling
 
 The `Load` function returns an error if any required environment variables are missing or if any values cannot be parsed. You can handle these errors as needed in your application.
@@ -115,7 +127,7 @@ func TestConfigLoading(t *testing.T) {
 	os.Setenv("HOSTS", "host1,host2,host3")
 
 	var config Config
-	if err := env_config.Load(&config); err != nil {
+	if err := env_config.LoadConfig(&config); err != nil {
 		t.Fatal(err)
 	}
 

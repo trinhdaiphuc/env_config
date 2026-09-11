@@ -12,7 +12,7 @@ import (
 type Config struct {
 	Host      string        `env:"HOST;default=localhost"`
 	Port      int           `env:"PORT;default=8080"`
-	Bytes     []byte        `env:"ENV_BYTES;default=foo,bar"`
+	Bytes     []byte        `env:"ENV_BYTES;default=1,2,3"`
 	Float32   float32       `env:"ENV_FLOAT;default=12.34"`
 	Timeout   time.Duration `env:"TIMEOUT"`
 	Date      time.Time     `env:"ENV_DATE"`

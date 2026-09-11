@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -13,13 +14,41 @@ type TypeStrategy interface {
 }
 
 func RegisterStrategy(strategyType reflect.Type, strategy TypeStrategy) {
+	_strategyMu.Lock()
+	defer _strategyMu.Unlock()
+
 	complexTypeStrategies[strategyType] = strategy
 }
 
 var (
+	// _strategyMu guards the registries: RegisterStrategy is exported, so a
+	// write can race with the reads done by a concurrent LoadConfig.
+	_strategyMu           sync.RWMutex
 	complexTypeStrategies = make(map[reflect.Type]TypeStrategy)
 	buildInTypeStrategies = make(map[reflect.Kind]TypeStrategy)
 )
+
+// lookupStrategy resolves the strategy for a field, by concrete type first and
+// by kind second. An unsupported type is an error, never a silent no-op.
+func lookupStrategy(fieldType reflect.Type, fieldKind reflect.Kind) (TypeStrategy, error) {
+	_strategyMu.RLock()
+	defer _strategyMu.RUnlock()
+
+	if strategy, ok := complexTypeStrategies[fieldType]; ok {
+		return strategy, nil
+	}
+
+	// the reflect.Slice fallback only knows how to fill a byte slice
+	if fieldKind == reflect.Slice && fieldType.Elem().Kind() != reflect.Uint8 {
+		return nil, fmt.Errorf("unsupported slice element type %s", fieldType.Elem())
+	}
+
+	if strategy, ok := buildInTypeStrategies[fieldKind]; ok {
+		return strategy, nil
+	}
+
+	return nil, fmt.Errorf("unsupported field type %s", fieldType)
+}
 
 type StringStrategy struct{}
 
@@ -53,7 +82,7 @@ func (s IntStrategy[I]) SetValue(field reflect.Value, envValue string, tagOption
 		return nil
 	}
 
-	v, err := strconv.ParseInt(value, 10, 64)
+	v, err := strconv.ParseInt(value, 10, field.Type().Bits())
 	if err != nil {
 		return err
 	}
@@ -78,7 +107,7 @@ func (s UintStrategy[U]) SetValue(field reflect.Value, envValue string, tagOptio
 		return nil
 	}
 
-	v, err := strconv.ParseUint(value, 10, 64)
+	v, err := strconv.ParseUint(value, 10, field.Type().Bits())
 	if err != nil {
 		return err
 	}
@@ -102,7 +131,7 @@ func (s FloatStrategy[F]) SetValue(field reflect.Value, envValue string, tagOpti
 		return nil
 	}
 
-	v, err := strconv.ParseFloat(value, 64)
+	v, err := strconv.ParseFloat(value, field.Type().Bits())
 	if err != nil {
 		return err
 	}
@@ -198,7 +227,6 @@ func (s StringSliceStrategy) SetValue(v reflect.Value, envValue string, tagOptio
 		return fmt.Errorf("invalid type, expected []string but got %s", v.Kind())
 	}
 
-	tagOption = setStringSliceDefaultTagOption(tagOption)
 	values, err := parseOptionValues(envValue, tagOption)
 	if err != nil {
 		return err
@@ -244,11 +272,11 @@ func (s BoolSliceStrategy) SetValue(v reflect.Value, envValue string, tagOption 
 
 	boolValues := make([]bool, len(values))
 	for i, val := range values {
-		var b bool
 		b, err := strconv.ParseBool(val)
-		if err == nil {
-			boolValues[i] = b
+		if err != nil {
+			return fmt.Errorf("parsing element %q: %w", val, err)
 		}
+		boolValues[i] = b
 	}
 	v.Set(reflect.ValueOf(boolValues))
 	return nil
@@ -266,7 +294,11 @@ func (s IntSliceStrategy[I]) SetValue(v reflect.Value, envValue string, tagOptio
 		return err
 	}
 
-	intValues := StringArrayToIntArray[I](values)
+	intValues, err := StringArrayToIntArray[I](values)
+	if err != nil {
+		return err
+	}
+
 	v.Set(reflect.ValueOf(intValues))
 	return nil
 }
@@ -283,7 +315,11 @@ func (s UintSliceStrategy[U]) SetValue(v reflect.Value, envValue string, tagOpti
 		return err
 	}
 
-	uintValues := StringArrayToUintArray[U](values)
+	uintValues, err := StringArrayToUintArray[U](values)
+	if err != nil {
+		return err
+	}
+
 	v.Set(reflect.ValueOf(uintValues))
 	return nil
 }
@@ -300,7 +336,11 @@ func (s FloatSliceStrategy[F]) SetValue(v reflect.Value, envValue string, tagOpt
 		return err
 	}
 
-	floatValues := StringArrayToFloatArray[F](values)
+	floatValues, err := StringArrayToFloatArray[F](values)
+	if err != nil {
+		return err
+	}
+
 	v.Set(reflect.ValueOf(floatValues))
 	return nil
 }
@@ -314,7 +354,11 @@ func parseOptionValue(envValue string, option TagOption) (string, error) {
 		return "", err
 	}
 
-	envValue, _ = value.(string)
+	envValue, ok := value.(string)
+	if !ok {
+		return "", fmt.Errorf("delimiter option is not supported for a single value field")
+	}
+
 	return envValue, nil
 }
 
@@ -323,12 +367,21 @@ func parseOptionValues(envValue string, option TagOption) ([]string, error) {
 		return parseOptionValues(envValue, defaultTagOption())
 	}
 
+	option = setStringSliceDefaultTagOption(option)
 	value, err := option.Apply(envValue)
 	if err != nil {
 		return nil, err
 	}
 
-	valueArr, _ := value.([]string)
+	valueArr, ok := value.([]string)
+	if !ok {
+		// an empty env value with no default yields no elements at all
+		if str, isStr := value.(string); isStr && str == "" {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("expected a delimited list but got %q", value)
+	}
+
 	return valueArr, nil
 }
 func init() {

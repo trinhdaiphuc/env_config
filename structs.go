@@ -53,6 +53,13 @@ func (c FieldItem) Load() error {
 	value := c.value
 	if value.Kind() == reflect.Ptr {
 		if value.IsNil() {
+			// an optional field stays nil unless an env var or a default provides a value
+			if !hasEnvValue(c) {
+				return nil
+			}
+			if !value.CanSet() {
+				return fmt.Errorf("cannot set value for key %s", c.key)
+			}
 			value.Set(reflect.New(value.Type().Elem()))
 		}
 		value = value.Elem()
@@ -62,12 +69,9 @@ func (c FieldItem) Load() error {
 		return fmt.Errorf("cannot set value for key %s", c.key)
 	}
 
-	strategy, exists := complexTypeStrategies[value.Type()]
-	if !exists {
-		strategy, exists = buildInTypeStrategies[value.Kind()]
-		if !exists {
-			return nil
-		}
+	strategy, err := lookupStrategy(value.Type(), value.Kind())
+	if err != nil {
+		return fmt.Errorf("key %s: %w", c.key, err)
 	}
 
 	return strategy.SetValue(value, envValue, c.TagOption())
@@ -79,14 +83,33 @@ type StructItem struct {
 	value     reflect.Value
 	tagOption TagOption
 	children  []Item
+
+	// target is the nil pointer field this section fills; alloc is assigned to it
+	// only when an env var or a default actually provides a value for a child.
+	target reflect.Value
+	alloc  reflect.Value
 }
 
 func (s StructItem) Load() error {
+	if s.target.IsValid() && !hasEnvValue(s) {
+		return nil
+	}
+
 	for _, child := range s.children {
 		if err := child.Load(); err != nil {
 			return err
 		}
 	}
+
+	if !s.target.IsValid() {
+		return nil
+	}
+
+	if !s.target.CanSet() {
+		return fmt.Errorf("cannot set value for key %s", s.prefix)
+	}
+	s.target.Set(s.alloc)
+
 	return nil
 }
 
@@ -124,19 +147,23 @@ func NewStruct(s interface{}, keyPrefix string) (StructItem, error) {
 			continue
 		}
 
+		if !structField.IsExported() {
+			return StructItem{}, fmt.Errorf("field %s: cannot load unexported field tagged with %q", structField.Name, DefaultTagName)
+		}
+
 		key, nestedTagOpts := parseTagAndKey(envTag)
 		key = combineKeyPrefix(keyPrefix, key)
 
-		if field.Kind() == reflect.Ptr && field.IsNil() {
-			field.Set(reflect.New(field.Type().Elem()))
+		fieldType := field.Type()
+		if fieldType.Kind() == reflect.Ptr {
+			fieldType = fieldType.Elem()
 		}
 
-		fieldType := field.Type()
-		if field.Kind() == reflect.Ptr {
-			fieldType = field.Elem().Type()
+		child, err := handlerFactory.GetHandler(fieldType).Handle(key, field, nestedTagOpts)
+		if err != nil {
+			return StructItem{}, fmt.Errorf("field %s: %w", structField.Name, err)
 		}
-		handler := handlerFactory.GetHandler(fieldType)
-		children = append(children, handler.Handle(key, field, nestedTagOpts))
+		children = append(children, child)
 	}
 
 	return StructItem{
@@ -145,6 +172,36 @@ func NewStruct(s interface{}, keyPrefix string) (StructItem, error) {
 		value:    val,
 		children: children,
 	}, nil
+}
+
+// hasEnvValue reports whether any leaf under item resolves to a value, either
+// from the environment or from a default tag option.
+func hasEnvValue(item Item) bool {
+	switch it := item.(type) {
+	case FieldItem:
+		if _, ok := os.LookupEnv(it.key); ok {
+			return true
+		}
+		return hasDefaultValue(it.tagOption)
+	case StructItem:
+		for _, child := range it.children {
+			if hasEnvValue(child) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func hasDefaultValue(option TagOption) bool {
+	for ; option != nil; option = option.Next() {
+		if defaultOpt, ok := option.(*DefaultOption); ok && defaultOpt != nil && defaultOpt.DefaultValue != "" {
+			return true
+		}
+	}
+
+	return false
 }
 
 func pointerVal(s interface{}) (reflect.Value, error) {
